@@ -817,6 +817,7 @@ function tt_exam_render_quiz_table( $quizzes, $exam_id ) {
 
     $difficulty_options = array();
     $topic_options      = array();
+    $total_questions    = 0;
     foreach ( $quizzes as $quiz ) {
         if ( ! $quiz instanceof WP_Post ) {
             continue;
@@ -824,6 +825,7 @@ function tt_exam_render_quiz_table( $quizzes, $exam_id ) {
         $difficulty = tt_exam_get_quiz_difficulty( $quiz->ID );
         $chapter    = tt_exam_get_quiz_chapter( $quiz->ID );
         $categories = tt_exam_get_quiz_category_labels( $quiz->ID );
+        $total_questions += tt_exam_get_quiz_question_count( $quiz->ID );
         if ( $difficulty ) {
             $difficulty_options[ strtolower( $difficulty ) ] = $difficulty;
         }
@@ -836,6 +838,21 @@ function tt_exam_render_quiz_table( $quizzes, $exam_id ) {
     ?>
 
     <div class="tt-quiz-browser" data-tt-quiz-browser data-per-page="20">
+        <div class="tt-quiz-summary" aria-label="<?php esc_attr_e( 'Quiz summary', 'tentracker' ); ?>">
+            <span>
+                <strong><?php echo esc_html( number_format_i18n( count( $quizzes ) ) ); ?></strong>
+                <?php esc_html_e( 'Quizzes', 'tentracker' ); ?>
+            </span>
+            <span>
+                <strong><?php echo esc_html( number_format_i18n( $total_questions ) ); ?></strong>
+                <?php esc_html_e( 'Questions total', 'tentracker' ); ?>
+            </span>
+            <span>
+                <strong>20</strong>
+                <?php esc_html_e( 'Per page', 'tentracker' ); ?>
+            </span>
+        </div>
+
         <div class="tt-quiz-toolbar" role="region" aria-label="<?php esc_attr_e( 'Quiz search and filters', 'tentracker' ); ?>">
             <label class="tt-quiz-search">
                 <span class="tt-quiz-search__icon" aria-hidden="true">Search</span>
@@ -871,7 +888,9 @@ function tt_exam_render_quiz_table( $quizzes, $exam_id ) {
 
         <div class="tt-quiz-table-meta">
             <span data-tt-quiz-count><?php echo esc_html( sprintf( _n( '%s quiz', '%s quizzes', count( $quizzes ), 'tentracker' ), number_format_i18n( count( $quizzes ) ) ) ); ?></span>
-            <span><?php esc_html_e( '20 per page', 'tentracker' ); ?></span>
+            <span data-tt-quiz-question-count>
+                <?php echo esc_html( sprintf( _n( '%s question', '%s questions', $total_questions, 'tentracker' ), number_format_i18n( $total_questions ) ) ); ?>
+            </span>
         </div>
 
         <div class="tt-quiz-table-shell">
@@ -909,6 +928,7 @@ function tt_exam_render_quiz_table( $quizzes, $exam_id ) {
                             data-search="<?php echo esc_attr( strtolower( $search_text ) ); ?>"
                             data-difficulty="<?php echo esc_attr( strtolower( $difficulty ) ); ?>"
                             data-topic="<?php echo esc_attr( $topic_key ); ?>"
+                            data-questions="<?php echo esc_attr( (string) $question_count ); ?>"
                         >
                             <td data-label="#" class="tt-quiz-col-num"><span class="tt-quiz-index"><?php echo esc_html( (string) ( $index + 1 ) ); ?></span></td>
                             <td data-label="<?php esc_attr_e( 'Quiz/Test', 'tentracker' ); ?>" class="tt-quiz-col-name">

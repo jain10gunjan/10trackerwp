@@ -62,7 +62,7 @@ foreach ( array( '_ek_exam_id', 'ek_exam_id', 'exam_id' ) as $exam_key ) {
 
       <div class="tt-single-quiz-stats" aria-label="<?php esc_attr_e( 'Quiz details', 'tentracker' ); ?>">
         <div>
-          <span><?php esc_html_e( 'Questions', 'tentracker' ); ?></span>
+          <span><?php esc_html_e( 'Questions total', 'tentracker' ); ?></span>
           <strong><?php echo esc_html( $question_count ? number_format_i18n( $question_count ) : __( 'Ready', 'tentracker' ) ); ?></strong>
         </div>
         <div>

@@ -141,7 +141,16 @@ $intro_content          = trim( (string) $intro_content );
                   <h2 class="tt-section-panel-head__title"><?php esc_html_e( 'All quizzes and tests for this exam', 'tentracker' ); ?></h2>
                 </div>
                 <span class="tt-section-panel-head__count">
-                  <?php echo esc_html( sprintf( _n( '%s item', '%s items', count( $quiz_posts ), 'tentracker' ), number_format_i18n( count( $quiz_posts ) ) ) ); ?>
+                  <?php
+                  echo esc_html(
+                      sprintf(
+                          /* translators: 1: quiz count, 2: question count */
+                          __( '%1$s quizzes • %2$s questions', 'tentracker' ),
+                          number_format_i18n( (int) $quiz_stats['quiz_count'] ),
+                          number_format_i18n( (int) $quiz_stats['question_count'] )
+                      )
+                  );
+                  ?>
                 </span>
               </div>
 

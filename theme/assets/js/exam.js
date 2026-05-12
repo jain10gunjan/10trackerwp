@@ -127,6 +127,7 @@
       var topic = browser.querySelector('[data-tt-quiz-topic]');
       var reset = browser.querySelector('[data-tt-quiz-reset]');
       var count = browser.querySelector('[data-tt-quiz-count]');
+      var questionCount = browser.querySelector('[data-tt-quiz-question-count]');
       var empty = browser.querySelector('[data-tt-quiz-empty]');
       var pagination = browser.querySelector('[data-tt-quiz-pagination]');
       var perPage = parseInt(browser.getAttribute('data-per-page') || '20', 10);
@@ -209,6 +210,9 @@
 
       function render() {
         var filtered = rows.filter(matches);
+        var filteredQuestions = filtered.reduce(function (sum, row) {
+          return sum + (parseInt(row.getAttribute('data-questions') || '0', 10) || 0);
+        }, 0);
         var totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
 
         if (currentPage > totalPages) currentPage = totalPages;
@@ -228,6 +232,10 @@
 
         if (count) {
           count.textContent = filtered.length === 1 ? '1 quiz' : (filtered.length + ' quizzes');
+        }
+
+        if (questionCount) {
+          questionCount.textContent = filteredQuestions === 1 ? '1 question' : (filteredQuestions + ' questions');
         }
 
         if (empty) {
