@@ -25,6 +25,8 @@ $quiz_posts             = tt_exam_get_quiz_posts( $exam_id );
 $quiz_stats             = tt_exam_get_quiz_stats( $quiz_posts );
 $about_posts            = tt_exam_get_related_posts( $exam_id );
 $current_affairs_posts  = tt_exam_get_related_posts( $exam_id, true );
+$intro_content          = preg_replace( '/\[ek_quiz_list[^\]]*\]/i', '', (string) get_the_content( null, false, $exam_id ) );
+$intro_content          = trim( (string) $intro_content );
 ?>
 
 <!-- Hero -->
@@ -86,9 +88,9 @@ $current_affairs_posts  = tt_exam_get_related_posts( $exam_id, true );
   <div class="tt-container">
     <main id="main" class="site-main tt-exam-main">
 
-      <?php if ( get_the_content() ) : ?>
+      <?php if ( '' !== trim( wp_strip_all_tags( strip_shortcodes( $intro_content ) ) ) ) : ?>
         <div class="tt-exam-intro entry-content">
-          <?php the_content(); ?>
+          <?php echo wpautop( do_shortcode( $intro_content ) ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
         </div>
       <?php endif; ?>
 
@@ -143,7 +145,7 @@ $current_affairs_posts  = tt_exam_get_related_posts( $exam_id, true );
                 </span>
               </div>
 
-              <?php tt_exam_render_quiz_cards( $quiz_posts, $exam_id ); ?>
+              <?php tt_exam_render_quiz_table( $quiz_posts, $exam_id ); ?>
             </div>
           </div>
 

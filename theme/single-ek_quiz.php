@@ -7,40 +7,126 @@
  */
 get_header();
 the_post();
-$quiz_id = get_the_ID();
+$quiz_id        = get_the_ID();
+$exam_id        = 0;
+$question_count = tt_exam_get_quiz_question_count( $quiz_id );
+$difficulty     = tt_exam_get_quiz_difficulty( $quiz_id );
+$duration       = tt_exam_get_quiz_duration( $quiz_id );
+$chapter        = tt_exam_get_quiz_chapter( $quiz_id );
+$categories     = tt_exam_get_quiz_category_labels( $quiz_id );
+$related_quiz   = tt_quiz_get_related_quizzes( $quiz_id, 6 );
+
+foreach ( array( '_ek_exam_id', 'ek_exam_id', 'exam_id' ) as $exam_key ) {
+    $maybe_exam_id = absint( get_post_meta( $quiz_id, $exam_key, true ) );
+    if ( $maybe_exam_id ) {
+        $exam_id = $maybe_exam_id;
+        break;
+    }
+}
 ?>
 
-<!-- Slim page header (breadcrumb + title) -->
-<div class="tt-page-header" style="padding:20px 0 24px;">
-  <div class="tt-container tt-page-header__inner">
+<header class="tt-single-quiz-hero">
+  <div class="tt-container">
     <?php tt_breadcrumbs(); ?>
-    <h1 class="tt-page-header__title" style="font-size:clamp(1.1rem,2vw,1.5rem);"><?php the_title(); ?></h1>
-  </div>
-</div>
 
-<div class="tt-content" style="padding-block:0;">
-  <!-- ExamKit auto-injects [ek_quiz] via the_content filter.
-       We only call the shortcode explicitly when it's NOT already present. -->
-  <div class="tt-quiz-wrap" style="padding-inline:0;max-width:100%;">
-    <?php
-    $content = get_the_content();
-    if ( strpos( $content, 'ek_quiz' ) === false ) {
-        echo do_shortcode( '[ek_quiz quiz_id="' . $quiz_id . '"]' );
-    } else {
-        echo apply_filters( 'the_content', $content );
-    }
-    ?>
-  </div>
+    <div class="tt-single-quiz-hero__grid">
+      <div class="tt-single-quiz-hero__content">
+        <p class="tt-single-quiz-hero__eyebrow"><?php esc_html_e( 'Practice Quiz', 'tentracker' ); ?></p>
+        <h1 class="tt-single-quiz-hero__title"><?php the_title(); ?></h1>
 
-  <!-- Solution review panel — revealed by JS when ExamKit fires its result event -->
-  <div class="tt-container" id="tt-solution-panel" style="display:none;padding-block:32px 48px;">
-    <div class="tt-solution-review">
-      <div class="tt-solution-review__header">
-        <span class="tt-solution-review__title">📖 <?php esc_html_e( 'Solution Review', 'tentracker' ); ?></span>
-        <span class="tt-solution-review__badge"><?php esc_html_e( 'All Questions', 'tentracker' ); ?></span>
+        <?php if ( has_excerpt() ) : ?>
+          <p class="tt-single-quiz-hero__sub"><?php the_excerpt(); ?></p>
+        <?php endif; ?>
+
+        <div class="tt-single-quiz-hero__chips">
+          <?php if ( $difficulty ) : ?>
+            <span><?php echo esc_html( $difficulty ); ?></span>
+          <?php endif; ?>
+          <?php if ( $chapter ) : ?>
+            <span><?php echo esc_html( $chapter ); ?></span>
+          <?php elseif ( ! empty( $categories ) ) : ?>
+            <span><?php echo esc_html( $categories[0] ); ?></span>
+          <?php endif; ?>
+          <?php if ( $duration ) : ?>
+            <span><?php echo esc_html( $duration ); ?></span>
+          <?php endif; ?>
+        </div>
+
+        <div class="tt-single-quiz-hero__actions">
+          <a href="#quiz-attempt" class="tt-btn tt-btn--primary"><?php esc_html_e( 'Start now', 'tentracker' ); ?></a>
+          <?php if ( $exam_id ) : ?>
+            <a href="<?php echo esc_url( get_permalink( $exam_id ) ); ?>" class="tt-btn tt-btn--outline"><?php esc_html_e( 'Back to exam', 'tentracker' ); ?></a>
+          <?php endif; ?>
+        </div>
       </div>
-      <!-- Items injected by JS after quiz finishes -->
-      <div id="tt-solution-items"></div>
+
+      <div class="tt-single-quiz-stats" aria-label="<?php esc_attr_e( 'Quiz details', 'tentracker' ); ?>">
+        <div>
+          <span><?php esc_html_e( 'Questions', 'tentracker' ); ?></span>
+          <strong><?php echo esc_html( $question_count ? number_format_i18n( $question_count ) : __( 'Ready', 'tentracker' ) ); ?></strong>
+        </div>
+        <div>
+          <span><?php esc_html_e( 'Level', 'tentracker' ); ?></span>
+          <strong><?php echo esc_html( $difficulty ?: __( 'Mixed', 'tentracker' ) ); ?></strong>
+        </div>
+        <div>
+          <span><?php esc_html_e( 'Time', 'tentracker' ); ?></span>
+          <strong><?php echo esc_html( $duration ?: __( 'Flexible', 'tentracker' ) ); ?></strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="tt-content tt-single-quiz-content">
+  <div class="tt-container">
+    <section class="tt-quiz-attempt-card" id="quiz-attempt" aria-label="<?php esc_attr_e( 'Quiz attempt', 'tentracker' ); ?>">
+      <div class="tt-quiz-attempt-card__head">
+        <div>
+          <p class="tt-section-panel-head__eyebrow"><?php esc_html_e( 'Attempt', 'tentracker' ); ?></p>
+          <h2 class="tt-quiz-attempt-card__title"><?php esc_html_e( 'Answer carefully and review instantly', 'tentracker' ); ?></h2>
+        </div>
+        <span><?php esc_html_e( 'Mobile optimized', 'tentracker' ); ?></span>
+      </div>
+
+      <div class="tt-quiz-wrap">
+        <?php
+        $content = get_the_content();
+        if ( strpos( $content, 'ek_quiz' ) === false ) {
+            echo do_shortcode( '[ek_quiz quiz_id="' . $quiz_id . '"]' );
+        } else {
+            echo apply_filters( 'the_content', $content );
+        }
+        ?>
+      </div>
+    </section>
+
+    <?php if ( ! empty( $related_quiz ) ) : ?>
+      <section class="tt-related-quiz-section" aria-labelledby="related-quiz-heading">
+        <div class="tt-section-panel-head">
+          <div>
+            <p class="tt-section-panel-head__eyebrow"><?php esc_html_e( 'Keep Practicing', 'tentracker' ); ?></p>
+            <h2 class="tt-section-panel-head__title" id="related-quiz-heading"><?php esc_html_e( 'Related quizzes from the same chapter or category', 'tentracker' ); ?></h2>
+          </div>
+          <span class="tt-section-panel-head__count">
+            <?php echo esc_html( sprintf( _n( '%s quiz', '%s quizzes', count( $related_quiz ), 'tentracker' ), number_format_i18n( count( $related_quiz ) ) ) ); ?>
+          </span>
+        </div>
+
+        <?php tt_quiz_render_related_cards( $related_quiz ); ?>
+      </section>
+    <?php endif; ?>
+
+    <!-- Solution review panel — revealed by JS when ExamKit fires its result event -->
+    <div id="tt-solution-panel" style="display:none;">
+      <div class="tt-solution-review">
+        <div class="tt-solution-review__header">
+          <span class="tt-solution-review__title">📖 <?php esc_html_e( 'Solution Review', 'tentracker' ); ?></span>
+          <span class="tt-solution-review__badge"><?php esc_html_e( 'All Questions', 'tentracker' ); ?></span>
+        </div>
+        <!-- Items injected by JS after quiz finishes -->
+        <div id="tt-solution-items"></div>
+      </div>
     </div>
   </div>
 </div>

@@ -108,7 +108,7 @@ add_action( 'wp_enqueue_scripts', 'tt_enqueue' );
  * Enqueue exam page assets only on single exam pages.
  */
 function tt_enqueue_exam_assets() {
-    if ( ! is_singular( 'ek_exam' ) ) {
+    if ( ! is_singular( array( 'ek_exam', 'ek_quiz' ) ) ) {
         return;
     }
 
@@ -632,6 +632,45 @@ function tt_exam_get_quiz_duration( $quiz_id ) {
 }
 
 /**
+ * Resolve the chapter/topic label for a quiz when present.
+ */
+function tt_exam_get_quiz_chapter( $quiz_id ) {
+    foreach ( array( '_ek_chapter', 'ek_chapter', 'quiz_chapter', '_quiz_chapter', 'chapter', '_chapter', 'topic', '_topic', 'lesson', '_lesson' ) as $key ) {
+        $value = trim( (string) get_post_meta( $quiz_id, $key, true ) );
+        if ( '' !== $value ) {
+            return sanitize_text_field( $value );
+        }
+    }
+
+    return '';
+}
+
+/**
+ * Resolve category labels for quiz display and filtering.
+ */
+function tt_exam_get_quiz_category_labels( $quiz_id ) {
+    $labels = array();
+    $terms  = get_the_terms( $quiz_id, 'category' );
+
+    if ( is_array( $terms ) ) {
+        foreach ( $terms as $term ) {
+            if ( $term instanceof WP_Term ) {
+                $labels[] = $term->name;
+            }
+        }
+    }
+
+    foreach ( array( 'category', 'quiz_category', '_quiz_category', 'ek_category', '_ek_category' ) as $key ) {
+        $value = trim( (string) get_post_meta( $quiz_id, $key, true ) );
+        if ( '' !== $value ) {
+            $labels[] = $value;
+        }
+    }
+
+    return array_values( array_unique( array_filter( array_map( 'sanitize_text_field', $labels ) ) ) );
+}
+
+/**
  * Build quick stats for the exam hero.
  */
 function tt_exam_get_quiz_stats( $quizzes ) {
@@ -663,16 +702,111 @@ function tt_exam_get_quiz_stats( $quizzes ) {
 }
 
 /**
- * Render the exam quiz/test cards.
+ * Fetch quizzes related to a quiz by same exam, chapter, or category.
  */
-function tt_exam_render_quiz_cards( $quizzes, $exam_id ) {
-    if ( empty( $quizzes ) ) {
-        if ( shortcode_exists( 'ek_quiz_list' ) ) {
-            echo '<div class="tt-shortcode-fallback">';
-            echo do_shortcode( '[ek_quiz_list exam_id="' . (int) $exam_id . '"]' ); // phpcs:ignore WordPress.Security.EscapeOutput
-            echo '</div>';
-            return;
+function tt_quiz_get_related_quizzes( $quiz_id, $limit = 6 ) {
+    $quiz_id = absint( $quiz_id );
+    if ( ! $quiz_id ) {
+        return array();
+    }
+
+    $posts_by_id = array();
+    $add_posts   = static function ( $posts ) use ( &$posts_by_id, $quiz_id, $limit ) {
+        foreach ( (array) $posts as $post ) {
+            if ( ! $post instanceof WP_Post || $post->ID === $quiz_id ) {
+                continue;
+            }
+            $posts_by_id[ $post->ID ] = $post;
+            if ( count( $posts_by_id ) >= $limit * 3 ) {
+                break;
+            }
         }
+    };
+
+    $exam_id = 0;
+    foreach ( array( '_ek_exam_id', 'ek_exam_id', 'exam_id' ) as $key ) {
+        $value = absint( get_post_meta( $quiz_id, $key, true ) );
+        if ( $value ) {
+            $exam_id = $value;
+            break;
+        }
+    }
+
+    if ( $exam_id ) {
+        $add_posts( get_posts( array(
+            'post_type'      => 'ek_quiz',
+            'post_status'    => 'publish',
+            'posts_per_page' => $limit,
+            'exclude'        => array( $quiz_id ),
+            'orderby'        => 'menu_order title',
+            'order'          => 'ASC',
+            'no_found_rows'  => true,
+            'meta_query'     => array(
+                'relation' => 'OR',
+                array( 'key' => '_ek_exam_id', 'value' => $exam_id, 'compare' => '=' ),
+                array( 'key' => 'ek_exam_id',  'value' => $exam_id, 'compare' => '=' ),
+                array( 'key' => 'exam_id',     'value' => $exam_id, 'compare' => '=' ),
+            ),
+        ) ) );
+    }
+
+    $chapter = tt_exam_get_quiz_chapter( $quiz_id );
+    if ( $chapter ) {
+        $add_posts( get_posts( array(
+            'post_type'      => 'ek_quiz',
+            'post_status'    => 'publish',
+            'posts_per_page' => $limit,
+            'exclude'        => array( $quiz_id ),
+            'orderby'        => 'menu_order title',
+            'order'          => 'ASC',
+            'no_found_rows'  => true,
+            'meta_query'     => array(
+                'relation' => 'OR',
+                array( 'key' => '_ek_chapter',    'value' => $chapter, 'compare' => '=' ),
+                array( 'key' => 'ek_chapter',     'value' => $chapter, 'compare' => '=' ),
+                array( 'key' => 'quiz_chapter',   'value' => $chapter, 'compare' => '=' ),
+                array( 'key' => '_quiz_chapter',  'value' => $chapter, 'compare' => '=' ),
+                array( 'key' => 'chapter',        'value' => $chapter, 'compare' => '=' ),
+                array( 'key' => 'topic',          'value' => $chapter, 'compare' => '=' ),
+            ),
+        ) ) );
+    }
+
+    $terms = get_the_terms( $quiz_id, 'category' );
+    if ( is_array( $terms ) && ! empty( $terms ) ) {
+        $add_posts( get_posts( array(
+            'post_type'      => 'ek_quiz',
+            'post_status'    => 'publish',
+            'posts_per_page' => $limit,
+            'exclude'        => array( $quiz_id ),
+            'orderby'        => 'menu_order title',
+            'order'          => 'ASC',
+            'no_found_rows'  => true,
+            'tax_query'      => array(
+                array(
+                    'taxonomy' => 'category',
+                    'field'    => 'term_id',
+                    'terms'    => wp_list_pluck( $terms, 'term_id' ),
+                    'operator' => 'IN',
+                ),
+            ),
+        ) ) );
+    }
+
+    $related = array_values( $posts_by_id );
+    usort( $related, static function ( $a, $b ) {
+        $menu = (int) $a->menu_order <=> (int) $b->menu_order;
+        return 0 !== $menu ? $menu : strcasecmp( $a->post_title, $b->post_title );
+    } );
+
+    return array_slice( $related, 0, $limit );
+}
+
+/**
+ * Render the exam quiz/test table.
+ */
+function tt_exam_render_quiz_table( $quizzes, $exam_id ) {
+    if ( empty( $quizzes ) ) {
         ?>
         <div class="tt-exam-empty">
             <?php esc_html_e( 'No quizzes or tests are linked with this exam yet.', 'tentracker' ); ?>
@@ -680,10 +814,81 @@ function tt_exam_render_quiz_cards( $quizzes, $exam_id ) {
         <?php
         return;
     }
+
+    $difficulty_options = array();
+    $topic_options      = array();
+    foreach ( $quizzes as $quiz ) {
+        if ( ! $quiz instanceof WP_Post ) {
+            continue;
+        }
+        $difficulty = tt_exam_get_quiz_difficulty( $quiz->ID );
+        $chapter    = tt_exam_get_quiz_chapter( $quiz->ID );
+        $categories = tt_exam_get_quiz_category_labels( $quiz->ID );
+        if ( $difficulty ) {
+            $difficulty_options[ strtolower( $difficulty ) ] = $difficulty;
+        }
+        if ( $chapter ) {
+            $topic_options[ sanitize_title( $chapter ) ] = $chapter;
+        } elseif ( ! empty( $categories ) ) {
+            $topic_options[ sanitize_title( $categories[0] ) ] = $categories[0];
+        }
+    }
     ?>
 
-    <div class="tt-quiz-grid">
-        <?php foreach ( $quizzes as $index => $quiz ) :
+    <div class="tt-quiz-browser" data-tt-quiz-browser data-per-page="20">
+        <div class="tt-quiz-toolbar" role="region" aria-label="<?php esc_attr_e( 'Quiz search and filters', 'tentracker' ); ?>">
+            <label class="tt-quiz-search">
+                <span class="tt-quiz-search__icon" aria-hidden="true">Search</span>
+                <input type="search" data-tt-quiz-search placeholder="<?php esc_attr_e( 'Search quiz or test name...', 'tentracker' ); ?>" autocomplete="off">
+            </label>
+
+            <?php if ( ! empty( $difficulty_options ) ) : ?>
+                <label class="tt-quiz-filter">
+                    <span><?php esc_html_e( 'Difficulty', 'tentracker' ); ?></span>
+                    <select data-tt-quiz-difficulty>
+                        <option value=""><?php esc_html_e( 'All', 'tentracker' ); ?></option>
+                        <?php foreach ( $difficulty_options as $value => $label ) : ?>
+                            <option value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $label ); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+            <?php endif; ?>
+
+            <?php if ( ! empty( $topic_options ) ) : ?>
+                <label class="tt-quiz-filter">
+                    <span><?php esc_html_e( 'Chapter/Category', 'tentracker' ); ?></span>
+                    <select data-tt-quiz-topic>
+                        <option value=""><?php esc_html_e( 'All', 'tentracker' ); ?></option>
+                        <?php foreach ( $topic_options as $value => $label ) : ?>
+                            <option value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $label ); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+            <?php endif; ?>
+
+            <button class="tt-quiz-reset" type="button" data-tt-quiz-reset><?php esc_html_e( 'Reset', 'tentracker' ); ?></button>
+        </div>
+
+        <div class="tt-quiz-table-meta">
+            <span data-tt-quiz-count><?php echo esc_html( sprintf( _n( '%s quiz', '%s quizzes', count( $quizzes ), 'tentracker' ), number_format_i18n( count( $quizzes ) ) ) ); ?></span>
+            <span><?php esc_html_e( '20 per page', 'tentracker' ); ?></span>
+        </div>
+
+        <div class="tt-quiz-table-shell">
+            <table class="tt-quiz-table tt-quiz-table--browser">
+                <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col"><?php esc_html_e( 'Quiz/Test', 'tentracker' ); ?></th>
+                        <th scope="col"><?php esc_html_e( 'Questions', 'tentracker' ); ?></th>
+                        <th scope="col"><?php esc_html_e( 'Difficulty', 'tentracker' ); ?></th>
+                        <th scope="col"><?php esc_html_e( 'Chapter/Category', 'tentracker' ); ?></th>
+                        <th scope="col"><?php esc_html_e( 'Duration', 'tentracker' ); ?></th>
+                        <th scope="col"><?php esc_html_e( 'Action', 'tentracker' ); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ( $quizzes as $index => $quiz ) :
             if ( ! $quiz instanceof WP_Post ) {
                 continue;
             }
@@ -693,32 +898,89 @@ function tt_exam_render_quiz_cards( $quizzes, $exam_id ) {
             $duration       = tt_exam_get_quiz_duration( $quiz->ID );
             $excerpt        = has_excerpt( $quiz ) ? get_the_excerpt( $quiz ) : wp_trim_words( wp_strip_all_tags( $quiz->post_content ), 22 );
             $difficulty_key = $difficulty ? sanitize_html_class( strtolower( $difficulty ) ) : 'na';
+            $chapter        = tt_exam_get_quiz_chapter( $quiz->ID );
+            $categories     = tt_exam_get_quiz_category_labels( $quiz->ID );
+            $topic_label    = $chapter ?: ( ! empty( $categories ) ? $categories[0] : '' );
+            $topic_key      = sanitize_title( $topic_label );
+            $search_text    = trim( get_the_title( $quiz ) . ' ' . $excerpt . ' ' . $difficulty . ' ' . $topic_label . ' ' . implode( ' ', $categories ) );
             ?>
-            <article class="tt-quiz-card">
-                <div class="tt-quiz-card__top">
-                    <span class="tt-quiz-card__number"><?php echo esc_html( str_pad( (string) ( $index + 1 ), 2, '0', STR_PAD_LEFT ) ); ?></span>
+                        <tr
+                            data-tt-quiz-row
+                            data-search="<?php echo esc_attr( strtolower( $search_text ) ); ?>"
+                            data-difficulty="<?php echo esc_attr( strtolower( $difficulty ) ); ?>"
+                            data-topic="<?php echo esc_attr( $topic_key ); ?>"
+                        >
+                            <td data-label="#" class="tt-quiz-col-num"><span class="tt-quiz-index"><?php echo esc_html( (string) ( $index + 1 ) ); ?></span></td>
+                            <td data-label="<?php esc_attr_e( 'Quiz/Test', 'tentracker' ); ?>" class="tt-quiz-col-name">
+                                <a class="tt-quiz-name" href="<?php echo esc_url( get_permalink( $quiz ) ); ?>"><?php echo esc_html( get_the_title( $quiz ) ); ?></a>
+                                <?php if ( $excerpt ) : ?>
+                                    <span class="tt-quiz-desc"><?php echo esc_html( $excerpt ); ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td data-label="<?php esc_attr_e( 'Questions', 'tentracker' ); ?>" class="tt-quiz-col-qs">
+                                <?php echo esc_html( $question_count ? number_format_i18n( $question_count ) : __( 'Soon', 'tentracker' ) ); ?>
+                            </td>
+                            <td data-label="<?php esc_attr_e( 'Difficulty', 'tentracker' ); ?>" class="tt-quiz-col-diff">
+                                <span class="tt-diff tt-diff--<?php echo esc_attr( $difficulty_key ); ?>"><?php echo esc_html( $difficulty ?: __( 'Mixed', 'tentracker' ) ); ?></span>
+                            </td>
+                            <td data-label="<?php esc_attr_e( 'Chapter/Category', 'tentracker' ); ?>" class="tt-quiz-col-topic">
+                                <?php echo esc_html( $topic_label ?: __( 'General', 'tentracker' ) ); ?>
+                            </td>
+                            <td data-label="<?php esc_attr_e( 'Duration', 'tentracker' ); ?>" class="tt-quiz-col-time">
+                                <?php echo esc_html( $duration ?: __( 'Flexible', 'tentracker' ) ); ?>
+                            </td>
+                            <td data-label="<?php esc_attr_e( 'Action', 'tentracker' ); ?>" class="tt-quiz-col-action">
+                                <a class="tt-quiz-action" href="<?php echo esc_url( get_permalink( $quiz ) ); ?>"><?php esc_html_e( 'Start', 'tentracker' ); ?></a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="tt-quiz-empty" data-tt-quiz-empty hidden>
+            <?php esc_html_e( 'No quizzes match your search or filters.', 'tentracker' ); ?>
+        </div>
+
+        <div class="tt-quiz-pagination" data-tt-quiz-pagination aria-label="<?php esc_attr_e( 'Quiz pagination', 'tentracker' ); ?>"></div>
+    </div>
+    <?php
+}
+
+/**
+ * Render compact related quiz cards.
+ */
+function tt_quiz_render_related_cards( $quizzes ) {
+    if ( empty( $quizzes ) ) {
+        return;
+    }
+    ?>
+    <div class="tt-related-quiz-grid">
+        <?php foreach ( $quizzes as $quiz ) :
+            if ( ! $quiz instanceof WP_Post ) {
+                continue;
+            }
+            $question_count = tt_exam_get_quiz_question_count( $quiz->ID );
+            $difficulty     = tt_exam_get_quiz_difficulty( $quiz->ID );
+            $chapter        = tt_exam_get_quiz_chapter( $quiz->ID );
+            ?>
+            <article class="tt-related-quiz-card">
+                <div class="tt-related-quiz-card__meta">
                     <?php if ( $difficulty ) : ?>
-                        <span class="tt-diff tt-diff--<?php echo esc_attr( $difficulty_key ); ?>"><?php echo esc_html( $difficulty ); ?></span>
+                        <span><?php echo esc_html( $difficulty ); ?></span>
+                    <?php endif; ?>
+                    <?php if ( $question_count ) : ?>
+                        <span><?php echo esc_html( sprintf( _n( '%s question', '%s questions', $question_count, 'tentracker' ), number_format_i18n( $question_count ) ) ); ?></span>
                     <?php endif; ?>
                 </div>
-
-                <h3 class="tt-quiz-card__title">
+                <h3 class="tt-related-quiz-card__title">
                     <a href="<?php echo esc_url( get_permalink( $quiz ) ); ?>"><?php echo esc_html( get_the_title( $quiz ) ); ?></a>
                 </h3>
-
-                <?php if ( $excerpt ) : ?>
-                    <p class="tt-quiz-card__desc"><?php echo esc_html( $excerpt ); ?></p>
+                <?php if ( $chapter ) : ?>
+                    <p class="tt-related-quiz-card__chapter"><?php echo esc_html( $chapter ); ?></p>
                 <?php endif; ?>
-
-                <div class="tt-quiz-card__meta">
-                    <span><?php echo esc_html( $question_count ? sprintf( _n( '%s question', '%s questions', $question_count, 'tentracker' ), number_format_i18n( $question_count ) ) : __( 'Question count soon', 'tentracker' ) ); ?></span>
-                    <?php if ( $duration ) : ?>
-                        <span><?php echo esc_html( $duration ); ?></span>
-                    <?php endif; ?>
-                </div>
-
-                <a class="tt-quiz-card__cta" href="<?php echo esc_url( get_permalink( $quiz ) ); ?>">
-                    <?php esc_html_e( 'Start practice', 'tentracker' ); ?>
+                <a class="tt-related-quiz-card__link" href="<?php echo esc_url( get_permalink( $quiz ) ); ?>">
+                    <?php esc_html_e( 'Practice next', 'tentracker' ); ?>
                 </a>
             </article>
         <?php endforeach; ?>
