@@ -44,12 +44,21 @@
 
     var initial = tabs[0];
     var persisted = '';
+    var hash = window.location.hash ? window.location.hash.replace('#', '') : '';
 
     try {
       persisted = localStorage.getItem(storageKey) || '';
     } catch (e) {}
 
-    if (persisted) {
+    if (hash) {
+      tabs.some(function (tab) {
+        if (tab.getAttribute('aria-controls') === hash) {
+          initial = tab;
+          return true;
+        }
+        return false;
+      });
+    } else if (persisted) {
       tabs.some(function (tab) {
         if (tab.getAttribute('aria-controls') === persisted) {
           initial = tab;
@@ -89,6 +98,20 @@
         event.preventDefault();
         tabs[nextIndex].focus();
         activate(tabs[nextIndex], true);
+      });
+    });
+
+    document.addEventListener('click', function (event) {
+      var link = event.target.closest ? event.target.closest('a[href^="#accordion-"]') : null;
+      if (!link) return;
+
+      var targetId = (link.getAttribute('href') || '').replace('#', '');
+      tabs.some(function (tab) {
+        if (tab.getAttribute('aria-controls') === targetId) {
+          activate(tab, true);
+          return true;
+        }
+        return false;
       });
     });
   }
