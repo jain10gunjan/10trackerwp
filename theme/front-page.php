@@ -287,7 +287,7 @@ $hero_url     = get_theme_mod( 'tt_hero_btn_url', home_url( '/exams' ) );
       <?php esc_html_e( 'Join 50,000+ students already practising on 10Tracker. It\'s completely free.', 'tentracker' ); ?>
     </p>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-      <a href="<?php echo esc_url( wp_registration_url() ); ?>" class="tt-btn tt-btn--primary tt-btn--lg">
+      <a href="<?php echo esc_url( tt_register_url() ); ?>" class="tt-btn tt-btn--primary tt-btn--lg">
         <?php esc_html_e( 'Create Free Account', 'tentracker' ); ?>
       </a>
       <a href="<?php echo esc_url( get_post_type_archive_link( 'ek_exam' ) ?: home_url( '/exams' ) ); ?>" class="tt-btn tt-btn--outline tt-btn--lg">

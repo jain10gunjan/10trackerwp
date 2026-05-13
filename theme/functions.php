@@ -11,6 +11,10 @@ define( 'TT_VERSION', '1.0.0' );
 define( 'TT_DIR',     get_template_directory() );
 define( 'TT_URL',     get_template_directory_uri() );
 
+function tt_register_url() {
+    return home_url( '/register/' );
+}
+
 /* Load nav walker */
 require_once TT_DIR . '/inc/class-tt-nav-walker.php';
 
@@ -95,7 +99,8 @@ function tt_enqueue() {
         'nonce'      => wp_create_nonce( 'tt_nonce' ),
         'is_logged'  => is_user_logged_in() ? 1 : 0,
         'login_url'  => wp_login_url( get_permalink() ),
-        'register_url' => wp_registration_url(),
+        'register_url' => tt_register_url(),
+        'dashboard_url' => home_url( '/dashboard/' ),
     ) );
 
     if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) {
@@ -140,11 +145,12 @@ function tt_enqueue_exam_assets() {
     }
 
     wp_localize_script( 'tt-exam', 'ttExam', array(
-        'restUrl'  => rest_url( 'examtracker/v1/' ),
-        'category' => $category,
-        'nonce'    => wp_create_nonce( 'wp_rest' ),
-        'examSlug' => (string) get_post_field( 'post_name', $post_id ),
-        'examId'   => (int) $post_id,
+        'restUrl'      => rest_url( 'examtracker/v1/' ),
+        'quizEndpoint' => rest_url( 'tentracker/v1/exams/' . (int) $post_id . '/quizzes' ),
+        'category'     => $category,
+        'nonce'        => wp_create_nonce( 'wp_rest' ),
+        'examSlug'     => (string) get_post_field( 'post_name', $post_id ),
+        'examId'       => (int) $post_id,
     ) );
 }
 add_action( 'wp_enqueue_scripts', 'tt_enqueue_exam_assets' );
@@ -286,6 +292,124 @@ function tt_nav_fallback() {
     echo '<li><a href="' . esc_url( home_url( '/my-attempts' ) ) . '">' . __( 'My Progress', 'tentracker' ) . '</a></li>';
     echo '</ul>';
 }
+
+/* ════════════════════════════════════════════════════════════
+   CUSTOM REGISTER ROUTE
+   ════════════════════════════════════════════════════════════ */
+function tt_register_rewrite_rule() {
+    add_rewrite_rule( '^register/?$', 'index.php?tt_register_page=1', 'top' );
+}
+add_action( 'init', 'tt_register_rewrite_rule' );
+
+function tt_register_query_vars( $vars ) {
+    $vars[] = 'tt_register_page';
+    return $vars;
+}
+add_filter( 'query_vars', 'tt_register_query_vars' );
+
+function tt_register_template( $template ) {
+    if ( get_query_var( 'tt_register_page' ) ) {
+        return TT_DIR . '/page-register.php';
+    }
+
+    return $template;
+}
+add_filter( 'template_include', 'tt_register_template' );
+
+function tt_register_direct_template() {
+    $path = isset( $_SERVER['REQUEST_URI'] ) ? trim( (string) wp_parse_url( esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ), PHP_URL_PATH ), '/' ) : '';
+    if ( 'register' === $path ) {
+        include TT_DIR . '/page-register.php';
+        exit;
+    }
+}
+add_action( 'template_redirect', 'tt_register_direct_template', 0 );
+
+function tt_register_flush_rewrite() {
+    tt_register_rewrite_rule();
+    flush_rewrite_rules();
+}
+add_action( 'after_switch_theme', 'tt_register_flush_rewrite' );
+
+/**
+ * AJAX registration handler for the custom register page.
+ */
+function tt_ajax_register_user() {
+    if ( is_user_logged_in() ) {
+        wp_send_json_success( array(
+            'message'  => __( 'You are already logged in.', 'tentracker' ),
+            'redirect' => home_url( '/dashboard/' ),
+        ) );
+    }
+
+    $nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
+    if ( ! wp_verify_nonce( $nonce, 'tt_nonce' ) ) {
+        wp_send_json_error( array( 'message' => __( 'Security check failed. Refresh and try again.', 'tentracker' ) ), 403 );
+    }
+
+    if ( ! get_option( 'users_can_register' ) ) {
+        wp_send_json_error( array( 'message' => __( 'Registration is currently closed.', 'tentracker' ) ), 403 );
+    }
+
+    $name     = isset( $_POST['full_name'] ) ? sanitize_text_field( wp_unslash( $_POST['full_name'] ) ) : '';
+    $email    = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
+    $password = isset( $_POST['password'] ) ? (string) wp_unslash( $_POST['password'] ) : '';
+    $confirm  = isset( $_POST['confirm_password'] ) ? (string) wp_unslash( $_POST['confirm_password'] ) : '';
+    $errors   = array();
+
+    if ( '' === trim( $name ) ) {
+        $errors['full_name'] = __( 'Please enter your full name.', 'tentracker' );
+    }
+    if ( ! is_email( $email ) ) {
+        $errors['email'] = __( 'Please enter a valid email address.', 'tentracker' );
+    } elseif ( email_exists( $email ) ) {
+        $errors['email'] = __( 'An account with this email already exists.', 'tentracker' );
+    }
+    if ( strlen( $password ) < 8 ) {
+        $errors['password'] = __( 'Use at least 8 characters.', 'tentracker' );
+    }
+    if ( $password !== $confirm ) {
+        $errors['confirm_password'] = __( 'Passwords do not match.', 'tentracker' );
+    }
+
+    if ( ! empty( $errors ) ) {
+        wp_send_json_error( array(
+            'message' => __( 'Please fix the highlighted fields.', 'tentracker' ),
+            'errors'  => $errors,
+        ), 422 );
+    }
+
+    $base_login = sanitize_user( current( explode( '@', $email ) ), true );
+    $login      = $base_login ?: 'student';
+    $suffix     = 1;
+    while ( username_exists( $login ) ) {
+        $login = $base_login . $suffix;
+        $suffix++;
+    }
+
+    $user_id = wp_insert_user( array(
+        'user_login'   => $login,
+        'user_email'   => $email,
+        'user_pass'    => $password,
+        'display_name' => $name,
+        'first_name'   => $name,
+        'role'         => get_option( 'default_role', 'subscriber' ),
+    ) );
+
+    if ( is_wp_error( $user_id ) ) {
+        wp_send_json_error( array( 'message' => $user_id->get_error_message() ), 400 );
+    }
+
+    wp_set_current_user( $user_id );
+    wp_set_auth_cookie( $user_id, true );
+
+    wp_send_json_success( array(
+        'message'  => __( 'Account created successfully. Redirecting...', 'tentracker' ),
+        'redirect' => home_url( '/dashboard/' ),
+    ) );
+}
+add_action( 'wp_ajax_nopriv_tt_register_user', 'tt_ajax_register_user' );
+add_action( 'wp_ajax_tt_register_user', 'tt_ajax_register_user' );
 
 /* ════════════════════════════════════════════════════════════
    CUSTOMIZER
@@ -803,6 +927,103 @@ function tt_quiz_get_related_quizzes( $quiz_id, $limit = 6 ) {
 }
 
 /**
+ * Shape a quiz post for REST/front-end rendering.
+ */
+function tt_exam_prepare_quiz_item( $quiz, $index = 0 ) {
+    if ( ! $quiz instanceof WP_Post ) {
+        return null;
+    }
+
+    $question_count = tt_exam_get_quiz_question_count( $quiz->ID );
+    $difficulty     = tt_exam_get_quiz_difficulty( $quiz->ID );
+    $duration       = tt_exam_get_quiz_duration( $quiz->ID );
+    $chapter        = tt_exam_get_quiz_chapter( $quiz->ID );
+    $categories     = tt_exam_get_quiz_category_labels( $quiz->ID );
+    $excerpt        = has_excerpt( $quiz ) ? get_the_excerpt( $quiz ) : wp_trim_words( wp_strip_all_tags( $quiz->post_content ), 22 );
+    $topic_label    = $chapter ?: ( ! empty( $categories ) ? $categories[0] : '' );
+
+    return array(
+        'id'             => (int) $quiz->ID,
+        'index'          => (int) $index,
+        'title'          => get_the_title( $quiz ),
+        'excerpt'        => $excerpt,
+        'url'            => get_permalink( $quiz ),
+        'questions'      => (int) $question_count,
+        'difficulty'     => $difficulty,
+        'duration'       => $duration,
+        'chapter'        => $chapter,
+        'topic'          => $topic_label,
+        'topicKey'       => sanitize_title( $topic_label ),
+        'categories'     => $categories,
+        'difficultyKey'  => sanitize_title( $difficulty ),
+        'search'         => strtolower( trim( get_the_title( $quiz ) . ' ' . $excerpt . ' ' . $difficulty . ' ' . $topic_label . ' ' . implode( ' ', $categories ) ) ),
+    );
+}
+
+/**
+ * Theme REST endpoints.
+ */
+function tt_register_rest_routes() {
+    register_rest_route( 'tentracker/v1', '/exams/(?P<id>\d+)/quizzes', array(
+        'methods'             => WP_REST_Server::READABLE,
+        'permission_callback' => '__return_true',
+        'callback'            => 'tt_rest_exam_quizzes',
+        'args'                => array(
+            'id' => array(
+                'required'          => true,
+                'validate_callback' => static function ( $param ) {
+                    return is_numeric( $param );
+                },
+            ),
+        ),
+    ) );
+}
+add_action( 'rest_api_init', 'tt_register_rest_routes' );
+
+function tt_rest_exam_quizzes( WP_REST_Request $request ) {
+    $exam_id = absint( $request['id'] );
+    if ( ! $exam_id || 'ek_exam' !== get_post_type( $exam_id ) ) {
+        return new WP_Error( 'tt_exam_not_found', __( 'Exam not found.', 'tentracker' ), array( 'status' => 404 ) );
+    }
+
+    $quizzes = tt_exam_get_quiz_posts( $exam_id );
+    $items   = array();
+    foreach ( $quizzes as $index => $quiz ) {
+        $item = tt_exam_prepare_quiz_item( $quiz, $index + 1 );
+        if ( $item ) {
+            $items[] = $item;
+        }
+    }
+
+    $difficulty_options = array();
+    $topic_options      = array();
+    $total_questions    = 0;
+
+    foreach ( $items as $item ) {
+        $total_questions += (int) $item['questions'];
+        if ( ! empty( $item['difficulty'] ) ) {
+            $difficulty_options[ strtolower( $item['difficulty'] ) ] = $item['difficulty'];
+        }
+        if ( ! empty( $item['topic'] ) ) {
+            $topic_options[ $item['topicKey'] ] = $item['topic'];
+        }
+    }
+
+    return rest_ensure_response( array(
+        'items'      => $items,
+        'stats'      => array(
+            'quizCount'     => count( $items ),
+            'questionCount' => $total_questions,
+        ),
+        'filters'    => array(
+            'difficulty' => $difficulty_options,
+            'topic'      => $topic_options,
+        ),
+        'perPage'    => 20,
+    ) );
+}
+
+/**
  * Render the exam quiz/test table.
  */
 function tt_exam_render_quiz_table( $quizzes, $exam_id ) {
@@ -963,6 +1184,71 @@ function tt_exam_render_quiz_table( $quizzes, $exam_id ) {
         </div>
 
         <div class="tt-quiz-pagination" data-tt-quiz-pagination aria-label="<?php esc_attr_e( 'Quiz pagination', 'tentracker' ); ?>"></div>
+    </div>
+    <?php
+}
+
+/**
+ * Render an async REST-backed quiz browser shell.
+ */
+function tt_exam_render_quiz_rest_browser( $exam_id ) {
+    ?>
+    <div class="tt-quiz-browser tt-quiz-browser--async" data-tt-quiz-rest-browser data-per-page="20" data-endpoint="<?php echo esc_url( rest_url( 'tentracker/v1/exams/' . (int) $exam_id . '/quizzes' ) ); ?>">
+        <div class="tt-quiz-skeleton" data-tt-quiz-skeleton aria-live="polite" aria-busy="true">
+            <div class="tt-quiz-skeleton__toolbar"></div>
+            <div class="tt-quiz-skeleton__grid">
+                <?php for ( $i = 0; $i < 6; $i++ ) : ?>
+                    <div class="tt-quiz-skeleton__card">
+                        <span></span>
+                        <strong></strong>
+                        <em></em>
+                        <i></i>
+                    </div>
+                <?php endfor; ?>
+            </div>
+        </div>
+
+        <div class="tt-quiz-browser__content" data-tt-quiz-content hidden>
+            <div class="tt-quiz-summary" aria-label="<?php esc_attr_e( 'Quiz summary', 'tentracker' ); ?>">
+                <span><strong data-tt-rest-quiz-total>0</strong><?php esc_html_e( 'Quizzes', 'tentracker' ); ?></span>
+                <span><strong data-tt-rest-question-total>0</strong><?php esc_html_e( 'Questions total', 'tentracker' ); ?></span>
+                <span><strong>20</strong><?php esc_html_e( 'Per page', 'tentracker' ); ?></span>
+            </div>
+
+            <div class="tt-quiz-toolbar" role="region" aria-label="<?php esc_attr_e( 'Quiz search and filters', 'tentracker' ); ?>">
+                <label class="tt-quiz-search">
+                    <span class="tt-quiz-search__icon" aria-hidden="true"><?php esc_html_e( 'Search', 'tentracker' ); ?></span>
+                    <input type="search" data-tt-rest-search placeholder="<?php esc_attr_e( 'Search quiz or test name...', 'tentracker' ); ?>" autocomplete="off">
+                </label>
+
+                <label class="tt-quiz-filter" data-tt-rest-difficulty-wrap hidden>
+                    <span><?php esc_html_e( 'Difficulty', 'tentracker' ); ?></span>
+                    <select data-tt-rest-difficulty>
+                        <option value=""><?php esc_html_e( 'All', 'tentracker' ); ?></option>
+                    </select>
+                </label>
+
+                <label class="tt-quiz-filter" data-tt-rest-topic-wrap hidden>
+                    <span><?php esc_html_e( 'Chapter/Category', 'tentracker' ); ?></span>
+                    <select data-tt-rest-topic>
+                        <option value=""><?php esc_html_e( 'All', 'tentracker' ); ?></option>
+                    </select>
+                </label>
+
+                <button class="tt-quiz-reset" type="button" data-tt-rest-reset><?php esc_html_e( 'Reset', 'tentracker' ); ?></button>
+            </div>
+
+            <div class="tt-quiz-table-meta">
+                <span data-tt-rest-result-count></span>
+                <span data-tt-rest-result-questions></span>
+            </div>
+
+            <div class="tt-rest-quiz-grid" data-tt-rest-grid></div>
+            <div class="tt-quiz-empty" data-tt-rest-empty hidden><?php esc_html_e( 'No quizzes match your search or filters.', 'tentracker' ); ?></div>
+            <div class="tt-quiz-pagination" data-tt-rest-pagination aria-label="<?php esc_attr_e( 'Quiz pagination', 'tentracker' ); ?>"></div>
+        </div>
+
+        <div class="tt-exam-empty" data-tt-rest-error hidden><?php esc_html_e( 'Unable to load quizzes right now. Please try again.', 'tentracker' ); ?></div>
     </div>
     <?php
 }

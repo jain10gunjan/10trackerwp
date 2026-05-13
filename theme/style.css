@@ -1711,9 +1711,13 @@ ul, ol { padding-left: 1.5em; }
   padding: 20px 16px;
 }
 
-.tt-mobile-nav.open { pointer-events: all; }
-.tt-mobile-nav.open .tt-mobile-nav__overlay { opacity: 1; }
-.tt-mobile-nav.open .tt-mobile-nav__drawer { transform: translateX(0); }
+.tt-mobile-nav.open,
+.tt-mobile-nav.is-open { pointer-events: all; }
+.tt-mobile-nav.open .tt-mobile-nav__overlay,
+.tt-mobile-nav.is-open .tt-mobile-nav__overlay { opacity: 1; }
+.tt-mobile-nav.open .tt-mobile-nav__drawer,
+.tt-mobile-nav.is-open .tt-mobile-nav__drawer { transform: translateX(0); }
+body.tt-nav-open { overflow: hidden; }
 
 .tt-mobile-nav__close {
   position: absolute;
@@ -1790,6 +1794,177 @@ ul, ol { padding-left: 1.5em; }
 .tt-notice--success{ background: var(--green-lt);  border-color: #86efac; color: #14532d; }
 .tt-notice--warn   { background: var(--amber-lt);  border-color: #fcd34d; color: #78350f; }
 .tt-notice--error  { background: var(--red-lt);    border-color: #fca5a5; color: #7f1d1d; }
+
+/* ════════════════════════════════════════════════════════════
+   CUSTOM REGISTRATION PAGE
+   ════════════════════════════════════════════════════════════ */
+.tt-register-page {
+  min-height: calc(100vh - var(--nav-h));
+  padding: clamp(28px, 6vw, 72px) clamp(16px, 4vw, 40px);
+  background:
+    radial-gradient(900px 420px at 12% 0%, rgba(37,99,235,.14), transparent 58%),
+    radial-gradient(760px 380px at 88% 10%, rgba(6,182,212,.12), transparent 58%),
+    linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+}
+
+.tt-register-shell {
+  width: 100%;
+  max-width: 1080px;
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 430px);
+  gap: clamp(22px, 4vw, 48px);
+  align-items: center;
+}
+
+.tt-register-hero__eyebrow {
+  margin: 0 0 8px;
+  color: var(--blue);
+  font-size: .78rem;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.tt-register-hero__title {
+  max-width: 620px;
+  color: var(--text);
+  font-size: clamp(2rem, 4vw, 3.1rem);
+  font-weight: 900;
+  letter-spacing: -.04em;
+  line-height: 1.08;
+}
+
+.tt-register-hero__text {
+  max-width: 540px;
+  margin-top: 14px;
+  color: var(--text-3);
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.tt-register-benefits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 22px;
+}
+
+.tt-register-benefits span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 1px solid rgba(37,99,235,.16);
+  border-radius: var(--r-full);
+  background: rgba(255,255,255,.78);
+  color: var(--text-2);
+  font-size: .8rem;
+  font-weight: 900;
+}
+
+.tt-register-card {
+  border: 1px solid rgba(37,99,235,.12);
+  border-radius: var(--r-xl);
+  background: rgba(255,255,255,.92);
+  box-shadow: var(--shadow-xl);
+  backdrop-filter: blur(10px);
+  padding: clamp(18px, 3vw, 28px);
+}
+
+.tt-register-form {
+  display: grid;
+  gap: 14px;
+}
+
+.tt-register-form__notice {
+  padding: 12px 14px;
+  border-radius: var(--r);
+  font-size: .88rem;
+  font-weight: 800;
+}
+
+.tt-register-form__notice.is-error {
+  background: var(--red-lt);
+  color: #991b1b;
+  border: 1px solid rgba(220,38,38,.24);
+}
+
+.tt-register-form__notice.is-success {
+  background: var(--green-lt);
+  color: #166534;
+  border: 1px solid rgba(22,163,74,.24);
+}
+
+.tt-register-field {
+  display: grid;
+  gap: 7px;
+}
+
+.tt-register-field span {
+  color: var(--text-2);
+  font-size: .8rem;
+  font-weight: 900;
+}
+
+.tt-register-field input {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  padding: 11px 13px;
+  box-shadow: var(--shadow-xs);
+}
+
+.tt-register-field input:focus {
+  border-color: rgba(37,99,235,.45);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.10);
+}
+
+.tt-register-field.has-error input {
+  border-color: rgba(220,38,38,.48);
+  box-shadow: 0 0 0 3px rgba(220,38,38,.08);
+}
+
+.tt-register-field em {
+  min-height: 16px;
+  color: var(--red);
+  font-style: normal;
+  font-size: .76rem;
+  font-weight: 800;
+}
+
+.tt-register-submit {
+  min-height: 48px;
+  border: none;
+  border-radius: var(--r-lg);
+  background: linear-gradient(135deg, var(--blue), var(--cyan));
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+  box-shadow: 0 12px 28px rgba(37,99,235,.24);
+}
+
+.tt-register-submit:disabled {
+  cursor: wait;
+  opacity: .72;
+}
+
+.tt-register-login {
+  margin: 2px 0 0;
+  color: var(--text-3);
+  font-size: .88rem;
+  text-align: center;
+}
+
+.tt-register-login a {
+  font-weight: 900;
+}
 
 /* ════════════════════════════════════════════════════════════
    SINGLE EXAM / QUIZ page wrappers
@@ -1913,6 +2088,20 @@ ul, ol { padding-left: 1.5em; }
   .ek-quiz-wrap,
   [class*="ek-quiz"],
   [class*="examkit"] { max-width: 100% !important; overflow-x: hidden !important; }
+
+  .tt-register-page {
+    padding: 24px 14px 44px;
+  }
+
+  .tt-register-shell {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .tt-register-card {
+    padding: 16px;
+    border-radius: var(--r-lg);
+  }
 }
 
 @media (max-width: 480px) {

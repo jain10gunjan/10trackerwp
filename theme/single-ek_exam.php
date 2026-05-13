@@ -19,12 +19,6 @@ if ( ! is_array( $extra_items ) ) {
     $extra_items = array();
 }
 
-$exam_terms             = tt_exam_get_category_terms( $exam_id );
-$exam_category_label    = ! empty( $exam_terms ) ? $exam_terms[0]->name : $quiz_category;
-$quiz_posts             = tt_exam_get_quiz_posts( $exam_id );
-$quiz_stats             = tt_exam_get_quiz_stats( $quiz_posts );
-$about_posts            = tt_exam_get_related_posts( $exam_id );
-$current_affairs_posts  = tt_exam_get_related_posts( $exam_id, true );
 $intro_content          = preg_replace( '/\[ek_quiz_list[^\]]*\]/i', '', (string) get_the_content( null, false, $exam_id ) );
 $intro_content          = trim( (string) $intro_content );
 ?>
@@ -43,8 +37,8 @@ $intro_content          = trim( (string) $intro_content );
         <?php endif; ?>
 
         <div class="tt-exam-hero__meta">
-          <?php if ( $exam_category_label ) : ?>
-            <span class="tt-pill tt-pill--blue"><?php echo esc_html( $exam_category_label ); ?></span>
+          <?php if ( $quiz_category ) : ?>
+            <span class="tt-pill tt-pill--blue"><?php echo esc_html( $quiz_category ); ?></span>
           <?php endif; ?>
           <span class="tt-pill tt-pill--muted"><?php esc_html_e( 'Mobile friendly', 'tentracker' ); ?></span>
           <span class="tt-pill tt-pill--muted"><?php esc_html_e( 'Instant results', 'tentracker' ); ?></span>
@@ -55,7 +49,7 @@ $intro_content          = trim( (string) $intro_content );
           <?php if ( is_user_logged_in() ) : ?>
             <a href="<?php echo esc_url( home_url( '/my-attempts' ) ); ?>" class="tt-btn tt-btn--outline"><?php esc_html_e( 'View My Progress', 'tentracker' ); ?></a>
           <?php else : ?>
-            <a href="<?php echo esc_url( wp_registration_url() ); ?>" class="tt-btn tt-btn--outline"><?php esc_html_e( 'Create free account', 'tentracker' ); ?></a>
+            <a href="<?php echo esc_url( tt_register_url() ); ?>" class="tt-btn tt-btn--outline"><?php esc_html_e( 'Create free account', 'tentracker' ); ?></a>
           <?php endif; ?>
         </div>
       </div>
@@ -65,15 +59,15 @@ $intro_content          = trim( (string) $intro_content );
         <div class="tt-exam-hero__card-list">
           <div class="tt-exam-hero__card-row">
             <span><?php esc_html_e( 'Quizzes', 'tentracker' ); ?></span>
-            <strong><?php echo esc_html( number_format_i18n( (int) $quiz_stats['quiz_count'] ) ); ?></strong>
+            <strong id="tt-exam-quiz-count">—</strong>
           </div>
           <div class="tt-exam-hero__card-row">
             <span><?php esc_html_e( 'Questions', 'tentracker' ); ?></span>
-            <strong><?php echo esc_html( number_format_i18n( (int) $quiz_stats['question_count'] ) ); ?></strong>
+            <strong id="tt-exam-question-count">—</strong>
           </div>
           <div class="tt-exam-hero__card-row">
             <span><?php esc_html_e( 'Difficulty', 'tentracker' ); ?></span>
-            <strong><?php echo esc_html( $quiz_stats['difficulty_mix'] ?: __( 'Mixed', 'tentracker' ) ); ?></strong>
+            <strong id="tt-exam-diff-mix"><?php esc_html_e( 'Loading', 'tentracker' ); ?></strong>
           </div>
         </div>
         <div class="tt-exam-hero__card-foot">
@@ -93,6 +87,11 @@ $intro_content          = trim( (string) $intro_content );
           <?php echo wpautop( do_shortcode( $intro_content ) ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
         </div>
       <?php endif; ?>
+
+      <?php
+      $about_posts           = tt_exam_get_related_posts( $exam_id );
+      $current_affairs_posts = tt_exam_get_related_posts( $exam_id, true );
+      ?>
 
       <section class="tt-accordions tt-accordions--horizontal" aria-label="<?php esc_attr_e( 'Exam sections', 'tentracker' ); ?>">
         <div class="tt-accordion-tabs" role="tablist" aria-label="<?php esc_attr_e( 'Exam sections', 'tentracker' ); ?>">
@@ -140,21 +139,10 @@ $intro_content          = trim( (string) $intro_content );
                   <p class="tt-section-panel-head__eyebrow"><?php esc_html_e( 'Practice Quiz Section', 'tentracker' ); ?></p>
                   <h2 class="tt-section-panel-head__title"><?php esc_html_e( 'All quizzes and tests for this exam', 'tentracker' ); ?></h2>
                 </div>
-                <span class="tt-section-panel-head__count">
-                  <?php
-                  echo esc_html(
-                      sprintf(
-                          /* translators: 1: quiz count, 2: question count */
-                          __( '%1$s quizzes • %2$s questions', 'tentracker' ),
-                          number_format_i18n( (int) $quiz_stats['quiz_count'] ),
-                          number_format_i18n( (int) $quiz_stats['question_count'] )
-                      )
-                  );
-                  ?>
-                </span>
+                <span class="tt-section-panel-head__count" id="tt-practice-summary"><?php esc_html_e( 'Loading quizzes...', 'tentracker' ); ?></span>
               </div>
 
-              <?php tt_exam_render_quiz_table( $quiz_posts, $exam_id ); ?>
+              <?php tt_exam_render_quiz_rest_browser( $exam_id ); ?>
             </div>
           </div>
 

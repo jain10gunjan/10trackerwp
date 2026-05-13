@@ -44,7 +44,7 @@
         <a href="<?php echo esc_url( wp_login_url() ); ?>" class="tt-btn tt-btn--secondary tt-btn--sm">
           <?php esc_html_e( 'Login', 'tentracker' ); ?>
         </a>
-        <a href="<?php echo esc_url( wp_registration_url() ); ?>" class="tt-btn tt-btn--primary tt-btn--sm">
+        <a href="<?php echo esc_url( tt_register_url() ); ?>" class="tt-btn tt-btn--primary tt-btn--sm">
           <?php esc_html_e( 'Sign Up Free', 'tentracker' ); ?>
         </a>
       <?php endif; ?>
@@ -94,7 +94,7 @@
         <a href="<?php echo esc_url( wp_login_url() ); ?>" class="tt-btn tt-btn--secondary" style="width:100%; justify-content:center;">
           <?php esc_html_e( 'Login', 'tentracker' ); ?>
         </a>
-        <a href="<?php echo esc_url( wp_registration_url() ); ?>" class="tt-btn tt-btn--primary" style="width:100%; justify-content:center;">
+        <a href="<?php echo esc_url( tt_register_url() ); ?>" class="tt-btn tt-btn--primary" style="width:100%; justify-content:center;">
           <?php esc_html_e( 'Sign Up Free', 'tentracker' ); ?>
         </a>
       <?php endif; ?>

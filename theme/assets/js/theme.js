@@ -12,21 +12,27 @@
     var $nav      = $('#tt-mobile-nav');
     var $overlay  = $('#tt-mobile-overlay');
 
-    function openNav() {
-        $nav.addClass('open').attr('aria-hidden', 'false');
+    function openNav(e) {
+        if (e) e.preventDefault();
+        $nav.addClass('open is-open').attr('aria-hidden', 'false');
         $toggle.attr('aria-expanded', 'true');
-        $('body').css('overflow', 'hidden');
+        $('body').addClass('tt-nav-open').css('overflow', 'hidden');
     }
 
-    function closeNav() {
-        $nav.removeClass('open').attr('aria-hidden', 'true');
+    function closeNav(e) {
+        if (e) e.preventDefault();
+        $nav.removeClass('open is-open').attr('aria-hidden', 'true');
         $toggle.attr('aria-expanded', 'false');
-        $('body').css('overflow', '');
+        $('body').removeClass('tt-nav-open').css('overflow', '');
     }
 
-    $toggle.on('click', openNav);
+    $toggle.on('click', function (e) {
+        if ($nav.hasClass('open') || $nav.hasClass('is-open')) closeNav(e);
+        else openNav(e);
+    });
     $close.on('click', closeNav);
     $overlay.on('click', closeNav);
+    $nav.find('a').on('click', closeNav);
 
     $(document).on('keydown', function (e) {
         if (e.key === 'Escape') closeNav();
@@ -120,5 +126,78 @@
             color: '#fca5a5'
         });
     });
+
+    /* ── Custom registration form ───────────────────────── */
+    var $registerForm = $('[data-tt-register-form]');
+    if ($registerForm.length) {
+        var $notice = $registerForm.find('[data-tt-register-notice]');
+        var $submit = $registerForm.find('[data-tt-register-submit]');
+
+        function setRegisterNotice(message, type) {
+            if (!message) {
+                $notice.prop('hidden', true).removeClass('is-error is-success').text('');
+                return;
+            }
+            $notice.prop('hidden', false)
+                .removeClass('is-error is-success')
+                .addClass(type === 'success' ? 'is-success' : 'is-error')
+                .text(message);
+        }
+
+        function clearRegisterErrors() {
+            $registerForm.find('.tt-register-field').removeClass('has-error');
+            $registerForm.find('[data-error-for]').text('');
+            setRegisterNotice('', '');
+        }
+
+        function showRegisterErrors(errors) {
+            Object.keys(errors || {}).forEach(function (field) {
+                var $error = $registerForm.find('[data-error-for="' + field + '"]');
+                $error.text(errors[field] || '');
+                $error.closest('.tt-register-field').addClass('has-error');
+            });
+        }
+
+        $registerForm.on('submit', function (e) {
+            e.preventDefault();
+            clearRegisterErrors();
+
+            var formData = new FormData($registerForm[0]);
+            formData.append('action', 'tt_register_user');
+            formData.append('nonce', (window.ttData && ttData.nonce) ? ttData.nonce : '');
+
+            $submit.prop('disabled', true).text('Creating account...');
+
+            fetch((window.ttData && ttData.ajax_url) ? ttData.ajax_url : '/wp-admin/admin-ajax.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: formData
+            })
+                .then(function (response) {
+                    return response.json().catch(function () {
+                        throw new Error('Invalid server response');
+                    });
+                })
+                .then(function (json) {
+                    if (!json || !json.success) {
+                        var data = (json && json.data) || {};
+                        showRegisterErrors(data.errors || {});
+                        setRegisterNotice(data.message || 'Registration failed. Please try again.', 'error');
+                        return;
+                    }
+
+                    setRegisterNotice(json.data.message || 'Account created successfully.', 'success');
+                    window.setTimeout(function () {
+                        window.location.href = json.data.redirect || ((window.ttData && ttData.dashboard_url) ? ttData.dashboard_url : '/dashboard/');
+                    }, 600);
+                })
+                .catch(function () {
+                    setRegisterNotice('Registration failed. Please try again.', 'error');
+                })
+                .finally(function () {
+                    $submit.prop('disabled', false).text('Create Account');
+                });
+        });
+    }
 
 })(jQuery);

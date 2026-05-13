@@ -5,6 +5,12 @@
   var cfg = window.ttExam || {};
   var examSlug = (cfg.examSlug || '').toString() || 'exam';
 
+  function escHtml(value) {
+    var node = document.createElement('div');
+    node.textContent = value == null ? '' : String(value);
+    return node.innerHTML;
+  }
+
   function initHorizontalAccordions() {
     var tabs = Array.prototype.slice.call(document.querySelectorAll('.tt-accordion-tabs .tt-accordion__header'));
     var panels = Array.prototype.slice.call(document.querySelectorAll('.tt-accordion-panels .tt-accordion'));
@@ -279,8 +285,241 @@
     });
   }
 
+  function initRestQuizBrowsers() {
+    var browsers = Array.prototype.slice.call(document.querySelectorAll('[data-tt-quiz-rest-browser]'));
+    if (!browsers.length) return;
+
+    browsers.forEach(function (browser) {
+      var endpoint = browser.getAttribute('data-endpoint') || cfg.quizEndpoint || '';
+      var perPage = parseInt(browser.getAttribute('data-per-page') || '20', 10);
+      var skeleton = browser.querySelector('[data-tt-quiz-skeleton]');
+      var content = browser.querySelector('[data-tt-quiz-content]');
+      var error = browser.querySelector('[data-tt-rest-error]');
+      var grid = browser.querySelector('[data-tt-rest-grid]');
+      var empty = browser.querySelector('[data-tt-rest-empty]');
+      var pagination = browser.querySelector('[data-tt-rest-pagination]');
+      var search = browser.querySelector('[data-tt-rest-search]');
+      var difficulty = browser.querySelector('[data-tt-rest-difficulty]');
+      var difficultyWrap = browser.querySelector('[data-tt-rest-difficulty-wrap]');
+      var topic = browser.querySelector('[data-tt-rest-topic]');
+      var topicWrap = browser.querySelector('[data-tt-rest-topic-wrap]');
+      var reset = browser.querySelector('[data-tt-rest-reset]');
+      var resultCount = browser.querySelector('[data-tt-rest-result-count]');
+      var resultQuestions = browser.querySelector('[data-tt-rest-result-questions]');
+      var totalQuizzes = browser.querySelector('[data-tt-rest-quiz-total]');
+      var totalQuestions = browser.querySelector('[data-tt-rest-question-total]');
+      var practiceSummary = document.getElementById('tt-practice-summary');
+      var heroQuizCount = document.getElementById('tt-exam-quiz-count');
+      var heroQuestionCount = document.getElementById('tt-exam-question-count');
+      var heroDiffMix = document.getElementById('tt-exam-diff-mix');
+      var items = [];
+      var currentPage = 1;
+
+      function setLoading(isLoading) {
+        if (skeleton) {
+          skeleton.hidden = !isLoading;
+          skeleton.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+        }
+        if (content) content.hidden = isLoading;
+        if (error) error.hidden = true;
+      }
+
+      function setError() {
+        if (skeleton) skeleton.hidden = true;
+        if (content) content.hidden = true;
+        if (error) error.hidden = false;
+        if (practiceSummary) practiceSummary.textContent = 'Unable to load quizzes';
+        if (heroDiffMix) heroDiffMix.textContent = 'Unavailable';
+      }
+
+      function formatCount(count, singular, plural) {
+        return count === 1 ? ('1 ' + singular) : (String(count) + ' ' + plural);
+      }
+
+      function fillSelect(select, wrap, options) {
+        if (!select || !wrap) return;
+        var keys = Object.keys(options || {});
+        if (!keys.length) {
+          wrap.hidden = true;
+          return;
+        }
+        keys.forEach(function (key) {
+          var option = document.createElement('option');
+          option.value = key;
+          option.textContent = options[key];
+          select.appendChild(option);
+        });
+        wrap.hidden = false;
+      }
+
+      function matches(item) {
+        var query = search ? (search.value || '').trim().toLowerCase() : '';
+        var diff = difficulty ? (difficulty.value || '').trim().toLowerCase() : '';
+        var selectedTopic = topic ? (topic.value || '').trim().toLowerCase() : '';
+        if (query && String(item.search || '').indexOf(query) === -1) return false;
+        if (diff && String(item.difficulty || '').toLowerCase() !== diff) return false;
+        if (selectedTopic && String(item.topicKey || '').toLowerCase() !== selectedTopic) return false;
+        return true;
+      }
+
+      function renderCard(item, number) {
+        var diff = item.difficulty || 'Mixed';
+        var diffKey = item.difficultyKey || 'na';
+        var topicText = item.topic || 'General';
+        var questions = item.questions ? formatCount(item.questions, 'question', 'questions') : 'Questions soon';
+        var duration = item.duration || 'Flexible';
+
+        return ''
+          + '<article class="tt-rest-quiz-card">'
+          + '  <div class="tt-rest-quiz-card__top">'
+          + '    <span class="tt-rest-quiz-card__num">' + escHtml(number) + '</span>'
+          + '    <span class="tt-diff tt-diff--' + escHtml(diffKey) + '">' + escHtml(diff) + '</span>'
+          + '  </div>'
+          + '  <h3 class="tt-rest-quiz-card__title"><a href="' + escHtml(item.url || '#') + '">' + escHtml(item.title || 'Quiz') + '</a></h3>'
+          + (item.excerpt ? '<p class="tt-rest-quiz-card__desc">' + escHtml(item.excerpt) + '</p>' : '')
+          + '  <div class="tt-rest-quiz-card__meta">'
+          + '    <span>' + escHtml(questions) + '</span>'
+          + '    <span>' + escHtml(topicText) + '</span>'
+          + '    <span>' + escHtml(duration) + '</span>'
+          + '  </div>'
+          + '  <a class="tt-rest-quiz-card__cta" href="' + escHtml(item.url || '#') + '">Start practice</a>'
+          + '</article>';
+      }
+
+      function renderPager(totalPages) {
+        if (!pagination) return;
+        pagination.innerHTML = '';
+        if (totalPages <= 1) {
+          pagination.hidden = true;
+          return;
+        }
+
+        pagination.hidden = false;
+        ['Prev', 'Next'].forEach(function () {});
+
+        function addButton(label, page, disabled, current) {
+          var button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'tt-quiz-page-btn';
+          button.textContent = label;
+          button.disabled = !!disabled;
+          if (current) button.setAttribute('aria-current', 'page');
+          button.addEventListener('click', function () {
+            currentPage = page;
+            render();
+          });
+          pagination.appendChild(button);
+        }
+
+        addButton('Prev', Math.max(1, currentPage - 1), currentPage === 1, false);
+        for (var i = 1; i <= totalPages; i++) {
+          if (totalPages > 7 && i !== 1 && i !== totalPages && Math.abs(i - currentPage) > 1) {
+            if (i === 2 || i === totalPages - 1) {
+              var dots = document.createElement('span');
+              dots.className = 'tt-quiz-page-dots';
+              dots.textContent = '...';
+              pagination.appendChild(dots);
+            }
+            continue;
+          }
+          addButton(String(i), i, false, i === currentPage);
+        }
+        addButton('Next', Math.min(totalPages, currentPage + 1), currentPage === totalPages, false);
+      }
+
+      function updateGlobalStats(data) {
+        var stats = data.stats || {};
+        var filters = data.filters || {};
+        var quizCount = Number(stats.quizCount || items.length) || 0;
+        var questionCount = Number(stats.questionCount || 0) || 0;
+        var diffLabels = Object.keys(filters.difficulty || {}).map(function (key) {
+          return filters.difficulty[key];
+        });
+
+        if (totalQuizzes) totalQuizzes.textContent = String(quizCount);
+        if (totalQuestions) totalQuestions.textContent = String(questionCount);
+        if (heroQuizCount) heroQuizCount.textContent = String(quizCount);
+        if (heroQuestionCount) heroQuestionCount.textContent = String(questionCount);
+        if (heroDiffMix) heroDiffMix.textContent = diffLabels.length ? diffLabels.slice(0, 3).join(', ') : 'Mixed';
+        if (practiceSummary) practiceSummary.textContent = quizCount + ' quizzes - ' + questionCount + ' questions';
+      }
+
+      function render() {
+        var filtered = items.filter(matches);
+        var filteredQuestions = filtered.reduce(function (sum, item) {
+          return sum + (Number(item.questions || 0) || 0);
+        }, 0);
+        var totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+        if (currentPage > totalPages) currentPage = totalPages;
+
+        var start = (currentPage - 1) * perPage;
+        var pageItems = filtered.slice(start, start + perPage);
+
+        if (grid) {
+          grid.innerHTML = pageItems.map(function (item, index) {
+            return renderCard(item, start + index + 1);
+          }).join('');
+        }
+
+        if (resultCount) resultCount.textContent = formatCount(filtered.length, 'quiz', 'quizzes');
+        if (resultQuestions) resultQuestions.textContent = formatCount(filteredQuestions, 'question', 'questions');
+        if (empty) empty.hidden = filtered.length > 0;
+        renderPager(totalPages);
+      }
+
+      function bindControls() {
+        [search, difficulty, topic].forEach(function (control) {
+          if (!control) return;
+          control.addEventListener(control === search ? 'input' : 'change', function () {
+            currentPage = 1;
+            render();
+          });
+        });
+        if (reset) {
+          reset.addEventListener('click', function () {
+            if (search) search.value = '';
+            if (difficulty) difficulty.value = '';
+            if (topic) topic.value = '';
+            currentPage = 1;
+            render();
+          });
+        }
+      }
+
+      if (!endpoint) {
+        setError();
+        return;
+      }
+
+      setLoading(true);
+      fetch(endpoint, {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: {
+          'Accept': 'application/json',
+          'X-WP-Nonce': (cfg.nonce || '').toString()
+        }
+      })
+        .then(function (response) {
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+          return response.json();
+        })
+        .then(function (data) {
+          items = Array.isArray(data.items) ? data.items : [];
+          fillSelect(difficulty, difficultyWrap, (data.filters || {}).difficulty || {});
+          fillSelect(topic, topicWrap, (data.filters || {}).topic || {});
+          updateGlobalStats(data);
+          bindControls();
+          setLoading(false);
+          render();
+        })
+        .catch(setError);
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     initHorizontalAccordions();
     initQuizBrowsers();
+    initRestQuizBrowsers();
   });
 })();
