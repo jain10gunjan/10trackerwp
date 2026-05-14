@@ -1054,7 +1054,7 @@ function tt_exam_get_quiz_payload( $exam_id ) {
         }
     }
 
-    return rest_ensure_response( array(
+    return array(
         'items'      => $items,
         'stats'      => array(
             'quizCount'     => count( $items ),
