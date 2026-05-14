@@ -698,14 +698,14 @@ function tt_exam_get_quiz_posts( $exam_id ) {
  * Resolve a quiz question count from common ExamKit/custom meta keys.
  */
 function tt_exam_get_quiz_question_count( $quiz_id ) {
-    foreach ( array( '_ek_question_count', 'ek_question_count', 'question_count', 'questions_count', 'total_questions', '_question_count' ) as $key ) {
+    foreach ( array( '_ek_question_count', 'ek_question_count', 'question_count', 'questions_count', 'total_questions', '_question_count', '_ek_total_questions', 'ek_total_questions', '_ek_questions_count', 'ek_questions_count', 'total_question', 'no_of_questions', '_no_of_questions' ) as $key ) {
         $value = get_post_meta( $quiz_id, $key, true );
         if ( is_numeric( $value ) ) {
             return max( 0, (int) $value );
         }
     }
 
-    foreach ( array( '_ek_questions', 'ek_questions', 'questions' ) as $key ) {
+    foreach ( array( '_ek_questions', 'ek_questions', 'questions', '_questions', 'quiz_questions', '_quiz_questions' ) as $key ) {
         $value = get_post_meta( $quiz_id, $key, true );
         if ( is_array( $value ) ) {
             return count( $value );
@@ -715,7 +715,28 @@ function tt_exam_get_quiz_question_count( $quiz_id ) {
             if ( is_array( $decoded ) ) {
                 return count( $decoded );
             }
+            $maybe_serialized = maybe_unserialize( $value );
+            if ( is_array( $maybe_serialized ) ) {
+                return count( $maybe_serialized );
+            }
+            $ids = array_filter( array_map( 'absint', preg_split( '/[\s,|]+/', $value ) ) );
+            if ( ! empty( $ids ) ) {
+                return count( $ids );
+            }
         }
+    }
+
+    $children = get_posts( array(
+        'post_type'      => 'any',
+        'post_status'    => 'any',
+        'post_parent'    => $quiz_id,
+        'fields'         => 'ids',
+        'posts_per_page' => -1,
+        'no_found_rows'  => true,
+    ) );
+    $children_count = count( $children );
+    if ( $children_count > 0 ) {
+        return $children_count;
     }
 
     return 0;
@@ -1411,8 +1432,9 @@ function tt_exam_render_article_cards( $posts, $empty_message ) {
     }
     ?>
 
-    <div class="tt-post-grid">
-        <?php foreach ( $posts as $article ) :
+    <div class="tt-post-browser" data-tt-post-browser data-per-page="10">
+      <div class="tt-post-grid">
+        <?php foreach ( $posts as $article_index => $article ) :
             if ( ! $article instanceof WP_Post ) {
                 continue;
             }
@@ -1423,7 +1445,7 @@ function tt_exam_render_article_cards( $posts, $empty_message ) {
             $reading_time   = max( 1, (int) ceil( str_word_count( wp_strip_all_tags( $article->post_content ) ) / 220 ) );
             $has_thumb      = has_post_thumbnail( $article );
             ?>
-            <article class="tt-post-card <?php echo $has_thumb ? 'tt-post-card--has-thumb' : 'tt-post-card--no-thumb'; ?>">
+            <article class="tt-post-card <?php echo $has_thumb ? 'tt-post-card--has-thumb' : 'tt-post-card--no-thumb'; ?>" data-tt-post-card>
                 <?php if ( $has_thumb ) : ?>
                     <a class="tt-post-card__media" href="<?php echo esc_url( get_permalink( $article ) ); ?>" aria-label="<?php echo esc_attr( get_the_title( $article ) ); ?>">
                         <?php echo get_the_post_thumbnail( $article, 'tt-thumb', array( 'class' => 'tt-post-card__img' ) ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
@@ -1470,6 +1492,8 @@ function tt_exam_render_article_cards( $posts, $empty_message ) {
                 </div>
             </article>
         <?php endforeach; ?>
+      </div>
+      <div class="tt-post-pagination" data-tt-post-pagination aria-label="<?php esc_attr_e( 'Article pagination', 'tentracker' ); ?>"></div>
     </div>
     <?php
 }

@@ -538,15 +538,15 @@
 .tt-quiz-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .tt-quiz-summary span {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 52px;
-  padding: 12px 14px;
+  min-height: 46px;
+  padding: 10px 12px;
   border: 1px solid rgba(37,99,235,.12);
   border-radius: var(--r-xl);
   background: linear-gradient(180deg, #fff, #f8fbff);
@@ -920,6 +920,11 @@
   gap: 12px;
 }
 
+.tt-post-browser {
+  display: grid;
+  gap: 14px;
+}
+
 .tt-post-card {
   display: grid;
   grid-template-columns: 148px minmax(0, 1fr);
@@ -1070,6 +1075,38 @@
 .tt-post-card__link:hover {
   background: var(--blue);
   color: #fff;
+}
+
+.tt-post-pagination {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tt-post-page-btn {
+  min-width: 36px;
+  min-height: 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: #fff;
+  color: var(--text-2);
+  cursor: pointer;
+  font: inherit;
+  font-size: .84rem;
+  font-weight: 900;
+}
+
+.tt-post-page-btn:hover:not(:disabled),
+.tt-post-page-btn[aria-current="page"] {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+
+.tt-post-page-btn:disabled {
+  cursor: not-allowed;
+  opacity: .5;
 }
 
 /* Single quiz page */
@@ -1493,17 +1530,23 @@
   }
 
   .tt-testbook-test-card__meta {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 9px;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
   }
 
   .tt-testbook-test-card__meta span {
-    padding: 8px 10px;
+    flex: 0 0 auto;
+    min-width: 0;
+    padding: 7px 9px;
     border: 1px solid var(--border);
     border-radius: var(--r);
     background: var(--surface-2);
     text-align: center;
+    font-size: .72rem;
+    white-space: nowrap;
   }
 
   .tt-testbook-test-card__side {
@@ -1519,13 +1562,25 @@
   }
 
   .tt-quiz-summary {
-    grid-template-columns: 1fr;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
   }
 
   .tt-quiz-summary span {
-    min-height: 44px;
-    padding: 10px 12px;
+    min-height: 42px;
+    padding: 8px 7px;
+    gap: 4px;
+    justify-content: center;
+    border-radius: 14px;
+    font-size: .68rem;
+    text-align: center;
+    line-height: 1.1;
+    flex-direction: column;
+  }
+
+  .tt-quiz-summary strong {
+    font-size: 1rem;
   }
 
   .tt-quiz-table-meta {
@@ -1739,5 +1794,9 @@
 
   .tt-post-card__link {
     width: 100%;
+  }
+
+  .tt-post-pagination {
+    justify-content: center;
   }
 }

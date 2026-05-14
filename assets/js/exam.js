@@ -555,9 +555,66 @@
     });
   }
 
+  function initPostBrowsers() {
+    var browsers = Array.prototype.slice.call(document.querySelectorAll('[data-tt-post-browser]'));
+    if (!browsers.length) return;
+
+    browsers.forEach(function (browser) {
+      var cards = Array.prototype.slice.call(browser.querySelectorAll('[data-tt-post-card]'));
+      var pagination = browser.querySelector('[data-tt-post-pagination]');
+      var perPage = parseInt(browser.getAttribute('data-per-page') || '10', 10);
+      var currentPage = 1;
+
+      if (!cards.length || !pagination) return;
+
+      function renderPager(totalPages) {
+        pagination.innerHTML = '';
+        pagination.hidden = totalPages <= 1;
+        if (totalPages <= 1) return;
+
+        function addButton(label, page, disabled, current) {
+          var button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'tt-post-page-btn';
+          button.textContent = label;
+          button.disabled = !!disabled;
+          if (current) button.setAttribute('aria-current', 'page');
+          button.addEventListener('click', function () {
+            currentPage = page;
+            render();
+            browser.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
+          pagination.appendChild(button);
+        }
+
+        addButton('Prev', Math.max(1, currentPage - 1), currentPage === 1, false);
+        for (var i = 1; i <= totalPages; i++) {
+          addButton(String(i), i, false, i === currentPage);
+        }
+        addButton('Next', Math.min(totalPages, currentPage + 1), currentPage === totalPages, false);
+      }
+
+      function render() {
+        var totalPages = Math.max(1, Math.ceil(cards.length / perPage));
+        if (currentPage > totalPages) currentPage = totalPages;
+        var start = (currentPage - 1) * perPage;
+        var end = start + perPage;
+
+        cards.forEach(function (card, index) {
+          card.hidden = index < start || index >= end;
+        });
+
+        renderPager(totalPages);
+      }
+
+      render();
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     initHorizontalAccordions();
     initQuizBrowsers();
     initRestQuizBrowsers();
+    initPostBrowsers();
   });
 })();
