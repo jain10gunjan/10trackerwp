@@ -739,6 +739,24 @@ function tt_exam_get_quiz_question_count( $quiz_id ) {
         return $children_count;
     }
 
+    global $wpdb;
+    if ( $wpdb instanceof wpdb ) {
+        $linked_count = (int) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(DISTINCT p.ID)
+                FROM {$wpdb->posts} p
+                INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
+                WHERE pm.meta_key IN ('quiz_id', '_quiz_id', 'ek_quiz_id', '_ek_quiz_id', 'parent_quiz_id', '_parent_quiz_id')
+                AND pm.meta_value = %d
+                AND p.post_status NOT IN ('trash', 'auto-draft')",
+                $quiz_id
+            )
+        );
+        if ( $linked_count > 0 ) {
+            return $linked_count;
+        }
+    }
+
     return 0;
 }
 

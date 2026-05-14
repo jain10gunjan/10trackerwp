@@ -1530,23 +1530,24 @@
   }
 
   .tt-testbook-test-card__meta {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 6px;
-    overflow-x: auto;
-    padding-bottom: 2px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+    overflow: visible;
+    padding-bottom: 0;
   }
 
   .tt-testbook-test-card__meta span {
-    flex: 0 0 auto;
     min-width: 0;
-    padding: 7px 9px;
+    padding: 7px 5px;
     border: 1px solid var(--border);
     border-radius: var(--r);
     background: var(--surface-2);
     text-align: center;
-    font-size: .72rem;
-    white-space: nowrap;
+    font-size: .64rem;
+    white-space: normal;
+    line-height: 1.12;
+    overflow-wrap: anywhere;
   }
 
   .tt-testbook-test-card__side {
