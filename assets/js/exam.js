@@ -310,9 +310,6 @@
       var totalQuizzes = browser.querySelector('[data-tt-rest-quiz-total]');
       var totalQuestions = browser.querySelector('[data-tt-rest-question-total]');
       var practiceSummary = document.getElementById('tt-practice-summary');
-      var heroQuizCount = document.getElementById('tt-exam-quiz-count');
-      var heroQuestionCount = document.getElementById('tt-exam-question-count');
-      var heroDiffMix = document.getElementById('tt-exam-diff-mix');
       var items = [];
       var currentPage = 1;
 
@@ -458,9 +455,6 @@
 
         if (totalQuizzes) totalQuizzes.textContent = String(quizCount);
         if (totalQuestions) totalQuestions.textContent = String(questionCount);
-        if (heroQuizCount) heroQuizCount.textContent = String(quizCount);
-        if (heroQuestionCount) heroQuestionCount.textContent = String(questionCount);
-        if (heroDiffMix) heroDiffMix.textContent = 'English, Hindi';
         if (practiceSummary) practiceSummary.textContent = quizCount + ' Tests';
       }
 

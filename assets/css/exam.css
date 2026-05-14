@@ -25,10 +25,20 @@
 
 .tt-exam-hero__grid {
   display: grid;
-  grid-template-columns: 1.25fr .75fr;
-  gap: 22px;
+  grid-template-columns: 1fr;
+  gap: 0;
   align-items: start;
   margin-top: 10px;
+}
+
+.tt-exam-hero__content {
+  max-width: 860px;
+  padding: clamp(18px, 3vw, 30px);
+  border: 1px solid rgba(37,99,235,.12);
+  border-radius: 28px;
+  background: rgba(255,255,255,.72);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(10px);
 }
 
 .tt-exam-hero__title {
@@ -82,66 +92,6 @@
   display:flex;
   gap: 10px;
   flex-wrap: wrap;
-}
-
-.tt-exam-hero__card {
-  background: rgba(255,255,255,.86);
-  border: 1px solid rgba(37,99,235,.12);
-  border-radius: var(--r-xl);
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
-  backdrop-filter: blur(10px);
-}
-.tt-exam-hero__card-title {
-  padding: 14px 16px 10px;
-  font-size: .75rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: .12em;
-  color: var(--text-3);
-  border-bottom: 1px solid var(--border);
-}
-.tt-exam-hero__card-list { padding: 6px 16px 4px; }
-.tt-exam-hero__card-row {
-  display:flex;
-  justify-content: space-between;
-  align-items:center;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--border);
-  font-size: .875rem;
-}
-.tt-exam-hero__card-row span { color: var(--text-3); }
-.tt-exam-hero__card-row strong { color: var(--text); font-weight: 900; }
-.tt-exam-hero__card-row:last-child { border-bottom: none; }
-.tt-exam-hero__card-foot {
-  padding: 12px 16px;
-  border-top: 1px solid var(--border);
-  background: var(--surface-2);
-}
-
-.tt-exam-series-cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 44px;
-  margin-bottom: 10px;
-  border-radius: var(--r-lg);
-  background: linear-gradient(135deg, var(--blue), var(--cyan));
-  color: #fff;
-  font-weight: 900;
-  box-shadow: 0 12px 28px rgba(37,99,235,.22);
-}
-
-.tt-exam-series-cta:hover {
-  color: #fff;
-  transform: translateY(-1px);
-}
-.tt-exam-hero__card-note {
-  display:block;
-  font-size: .75rem;
-  color: var(--text-3);
-  line-height: 1.5;
 }
 
 .tt-exam-main { max-width: 980px; margin-inline: auto; }
@@ -335,7 +285,6 @@
 
 @media (max-width: 960px) {
   .tt-exam-hero__grid { grid-template-columns: 1fr; }
-  .tt-exam-hero__card { order: -1; }
   .tt-input input { min-width: min(520px, 74vw); }
 }
 
@@ -1433,10 +1382,6 @@
     backdrop-filter: blur(10px);
   }
 
-  .tt-exam-hero__card {
-    display: none;
-  }
-
   .tt-exam-hero__title {
     font-size: clamp(1.45rem, 7vw, 2rem);
     line-height: 1.08;
@@ -1469,8 +1414,8 @@
 
   .tt-exam-hero__cta {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 9px;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
   }
 
   .tt-exam-hero__cta .tt-btn {
@@ -1478,6 +1423,11 @@
     min-height: 42px;
     justify-content: center;
     border-radius: 14px;
+    padding-inline: 8px;
+    font-size: .78rem;
+    white-space: normal;
+    line-height: 1.15;
+    text-align: center;
   }
 
   .tt-accordion-tabs {

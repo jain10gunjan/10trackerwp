@@ -72,29 +72,6 @@ $intro_content          = trim( (string) $intro_content );
         </div>
       </div>
 
-      <div class="tt-exam-hero__card">
-        <div class="tt-exam-hero__card-title"><?php esc_html_e( 'Test Series', 'tentracker' ); ?></div>
-        <div class="tt-exam-hero__card-list">
-          <div class="tt-exam-hero__card-row">
-            <span><?php esc_html_e( 'Total Tests', 'tentracker' ); ?></span>
-            <strong id="tt-exam-quiz-count">—</strong>
-          </div>
-          <div class="tt-exam-hero__card-row">
-            <span><?php esc_html_e( 'Total Questions', 'tentracker' ); ?></span>
-            <strong id="tt-exam-question-count">—</strong>
-          </div>
-          <div class="tt-exam-hero__card-row">
-            <span><?php esc_html_e( 'Languages', 'tentracker' ); ?></span>
-            <strong id="tt-exam-diff-mix"><?php esc_html_e( 'Loading', 'tentracker' ); ?></strong>
-          </div>
-        </div>
-        <div class="tt-exam-hero__card-foot">
-          <a href="<?php echo esc_url( is_user_logged_in() ? '#accordion-quiz' : tt_register_url() ); ?>" class="tt-exam-series-cta">
-            <?php echo esc_html( is_user_logged_in() ? __( 'Start Free Tests', 'tentracker' ) : __( 'Sign up & Take Free Tests', 'tentracker' ) ); ?>
-          </a>
-          <span class="tt-exam-hero__card-note"><?php esc_html_e( 'Practice tests, chapter tests and current affairs in one place.', 'tentracker' ); ?></span>
-        </div>
-      </div>
     </div>
   </div>
 </header>
