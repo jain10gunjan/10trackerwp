@@ -983,6 +983,10 @@
   transition: transform .18s var(--ease), box-shadow .18s var(--ease), border-color .18s var(--ease);
 }
 
+.tt-post-card--no-thumb {
+  grid-template-columns: 1fr;
+}
+
 .tt-post-card:hover {
   transform: translateY(-2px);
   border-color: rgba(37,99,235,.24);
@@ -1006,7 +1010,8 @@
   object-fit: cover;
 }
 
-.tt-post-card__placeholder {
+.tt-post-card__placeholder,
+.tt-post-card__inline-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1019,6 +1024,29 @@
   font-size: 1.2rem;
   font-weight: 900;
   box-shadow: var(--shadow-sm);
+}
+
+.tt-post-card__compact-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.tt-post-card__inline-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--blue-lt), #ecfeff);
+  box-shadow: none;
+}
+
+.tt-post-card__type {
+  color: var(--text-3);
+  font-size: .75rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 
 .tt-post-card__body {

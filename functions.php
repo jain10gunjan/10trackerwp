@@ -1421,17 +1421,23 @@ function tt_exam_render_article_cards( $posts, $empty_message ) {
             $category_names = array_slice( wp_list_pluck( (array) $categories, 'name' ), 0, 2 );
             $excerpt        = has_excerpt( $article ) ? get_the_excerpt( $article ) : wp_trim_words( wp_strip_all_tags( $article->post_content ), 22 );
             $reading_time   = max( 1, (int) ceil( str_word_count( wp_strip_all_tags( $article->post_content ) ) / 220 ) );
+            $has_thumb      = has_post_thumbnail( $article );
             ?>
-            <article class="tt-post-card">
-                <a class="tt-post-card__media" href="<?php echo esc_url( get_permalink( $article ) ); ?>" aria-label="<?php echo esc_attr( get_the_title( $article ) ); ?>">
-                    <?php if ( has_post_thumbnail( $article ) ) : ?>
+            <article class="tt-post-card <?php echo $has_thumb ? 'tt-post-card--has-thumb' : 'tt-post-card--no-thumb'; ?>">
+                <?php if ( $has_thumb ) : ?>
+                    <a class="tt-post-card__media" href="<?php echo esc_url( get_permalink( $article ) ); ?>" aria-label="<?php echo esc_attr( get_the_title( $article ) ); ?>">
                         <?php echo get_the_post_thumbnail( $article, 'tt-thumb', array( 'class' => 'tt-post-card__img' ) ); // phpcs:ignore WordPress.Security.EscapeOutput ?>
-                    <?php else : ?>
-                        <span class="tt-post-card__placeholder"><?php echo esc_html( mb_strtoupper( mb_substr( get_the_title( $article ), 0, 1 ) ) ); ?></span>
-                    <?php endif; ?>
-                </a>
+                    </a>
+                <?php endif; ?>
 
                 <div class="tt-post-card__body">
+                    <?php if ( ! $has_thumb ) : ?>
+                        <div class="tt-post-card__compact-head">
+                            <span class="tt-post-card__inline-icon"><?php echo esc_html( mb_strtoupper( mb_substr( get_the_title( $article ), 0, 1 ) ) ); ?></span>
+                            <span class="tt-post-card__type"><?php esc_html_e( 'Article', 'tentracker' ); ?></span>
+                        </div>
+                    <?php endif; ?>
+
                     <div class="tt-post-card__meta">
                         <?php if ( ! empty( $category_names ) ) : ?>
                             <?php foreach ( $category_names as $category_name ) : ?>
