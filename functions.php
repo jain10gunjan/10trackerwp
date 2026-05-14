@@ -1030,12 +1030,7 @@ function tt_register_rest_routes() {
 }
 add_action( 'rest_api_init', 'tt_register_rest_routes' );
 
-function tt_rest_exam_quizzes( WP_REST_Request $request ) {
-    $exam_id = absint( $request['id'] );
-    if ( ! $exam_id || 'ek_exam' !== get_post_type( $exam_id ) ) {
-        return new WP_Error( 'tt_exam_not_found', __( 'Exam not found.', 'tentracker' ), array( 'status' => 404 ) );
-    }
-
+function tt_exam_get_quiz_payload( $exam_id ) {
     $quizzes = tt_exam_get_quiz_posts( $exam_id );
     $items   = array();
     foreach ( $quizzes as $index => $quiz ) {
@@ -1070,7 +1065,16 @@ function tt_rest_exam_quizzes( WP_REST_Request $request ) {
             'topic'      => $topic_options,
         ),
         'perPage'    => 20,
-    ) );
+    );
+}
+
+function tt_rest_exam_quizzes( WP_REST_Request $request ) {
+    $exam_id = absint( $request['id'] );
+    if ( ! $exam_id || 'ek_exam' !== get_post_type( $exam_id ) ) {
+        return new WP_Error( 'tt_exam_not_found', __( 'Exam not found.', 'tentracker' ), array( 'status' => 404 ) );
+    }
+
+    return rest_ensure_response( tt_exam_get_quiz_payload( $exam_id ) );
 }
 
 /**
@@ -1242,46 +1246,42 @@ function tt_exam_render_quiz_table( $quizzes, $exam_id ) {
  * Render an async REST-backed quiz browser shell.
  */
 function tt_exam_render_quiz_rest_browser( $exam_id ) {
+    $payload = tt_exam_get_quiz_payload( $exam_id );
+    $stats   = $payload['stats'];
+    $filters = $payload['filters'];
     ?>
-    <div class="tt-quiz-browser tt-quiz-browser--async" data-tt-quiz-rest-browser data-per-page="20" data-endpoint="<?php echo esc_url( rest_url( 'tentracker/v1/exams/' . (int) $exam_id . '/quizzes' ) ); ?>">
-        <div class="tt-quiz-skeleton" data-tt-quiz-skeleton aria-live="polite" aria-busy="true">
-            <div class="tt-quiz-skeleton__toolbar"></div>
-            <div class="tt-quiz-skeleton__grid">
-                <?php for ( $i = 0; $i < 6; $i++ ) : ?>
-                    <div class="tt-quiz-skeleton__card">
-                        <span></span>
-                        <strong></strong>
-                        <em></em>
-                        <i></i>
-                    </div>
-                <?php endfor; ?>
-            </div>
-        </div>
-
-        <div class="tt-quiz-browser__content" data-tt-quiz-content hidden>
+    <div class="tt-quiz-browser tt-quiz-browser--series" data-tt-quiz-rest-browser data-static="1" data-per-page="20">
+        <script type="application/json" data-tt-rest-initial><?php echo wp_json_encode( $payload ); // phpcs:ignore WordPress.Security.EscapeOutput ?></script>
+        <div class="tt-quiz-browser__content" data-tt-quiz-content>
             <div class="tt-quiz-summary" aria-label="<?php esc_attr_e( 'Quiz summary', 'tentracker' ); ?>">
-                <span><strong data-tt-rest-quiz-total>0</strong><?php esc_html_e( 'Quizzes', 'tentracker' ); ?></span>
-                <span><strong data-tt-rest-question-total>0</strong><?php esc_html_e( 'Questions total', 'tentracker' ); ?></span>
+                <span><strong data-tt-rest-quiz-total><?php echo esc_html( number_format_i18n( (int) $stats['quizCount'] ) ); ?></strong><?php esc_html_e( 'Tests', 'tentracker' ); ?></span>
+                <span><strong data-tt-rest-question-total><?php echo esc_html( number_format_i18n( (int) $stats['questionCount'] ) ); ?></strong><?php esc_html_e( 'Questions', 'tentracker' ); ?></span>
                 <span><strong>20</strong><?php esc_html_e( 'Per page', 'tentracker' ); ?></span>
             </div>
 
             <div class="tt-quiz-toolbar" role="region" aria-label="<?php esc_attr_e( 'Quiz search and filters', 'tentracker' ); ?>">
                 <label class="tt-quiz-search">
                     <span class="tt-quiz-search__icon" aria-hidden="true"><?php esc_html_e( 'Search', 'tentracker' ); ?></span>
-                    <input type="search" data-tt-rest-search placeholder="<?php esc_attr_e( 'Search quiz or test name...', 'tentracker' ); ?>" autocomplete="off">
+                    <input type="search" data-tt-rest-search placeholder="<?php esc_attr_e( 'Search tests...', 'tentracker' ); ?>" autocomplete="off">
                 </label>
 
-                <label class="tt-quiz-filter" data-tt-rest-difficulty-wrap hidden>
+                <label class="tt-quiz-filter" data-tt-rest-difficulty-wrap <?php echo empty( $filters['difficulty'] ) ? 'hidden' : ''; ?>>
                     <span><?php esc_html_e( 'Difficulty', 'tentracker' ); ?></span>
                     <select data-tt-rest-difficulty>
                         <option value=""><?php esc_html_e( 'All', 'tentracker' ); ?></option>
+                        <?php foreach ( $filters['difficulty'] as $value => $label ) : ?>
+                            <option value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $label ); ?></option>
+                        <?php endforeach; ?>
                     </select>
                 </label>
 
-                <label class="tt-quiz-filter" data-tt-rest-topic-wrap hidden>
+                <label class="tt-quiz-filter" data-tt-rest-topic-wrap <?php echo empty( $filters['topic'] ) ? 'hidden' : ''; ?>>
                     <span><?php esc_html_e( 'Chapter/Category', 'tentracker' ); ?></span>
                     <select data-tt-rest-topic>
                         <option value=""><?php esc_html_e( 'All', 'tentracker' ); ?></option>
+                        <?php foreach ( $filters['topic'] as $value => $label ) : ?>
+                            <option value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $label ); ?></option>
+                        <?php endforeach; ?>
                     </select>
                 </label>
 
@@ -1289,24 +1289,69 @@ function tt_exam_render_quiz_rest_browser( $exam_id ) {
             </div>
 
             <div class="tt-quiz-table-meta">
-                <span data-tt-rest-result-count></span>
-                <span data-tt-rest-result-questions></span>
+                <span data-tt-rest-result-count><?php echo esc_html( sprintf( _n( '%s test', '%s tests', (int) $stats['quizCount'], 'tentracker' ), number_format_i18n( (int) $stats['quizCount'] ) ) ); ?></span>
+                <span data-tt-rest-result-questions><?php echo esc_html( sprintf( _n( '%s question', '%s questions', (int) $stats['questionCount'], 'tentracker' ), number_format_i18n( (int) $stats['questionCount'] ) ) ); ?></span>
             </div>
 
             <div class="tt-testbook-layout">
                 <aside class="tt-testbook-sidebar" aria-label="<?php esc_attr_e( 'Test categories', 'tentracker' ); ?>">
                     <div class="tt-testbook-sidebar__title"><?php esc_html_e( 'Mock Tests', 'tentracker' ); ?></div>
-                    <div class="tt-testbook-category-list" data-tt-rest-topic-rail></div>
+                    <div class="tt-testbook-category-list" data-tt-rest-topic-rail>
+                        <button type="button" class="is-active" data-topic-value="">
+                            <?php esc_html_e( 'All Tests', 'tentracker' ); ?>
+                            <span>(<?php echo esc_html( number_format_i18n( (int) $stats['quizCount'] ) ); ?>)</span>
+                        </button>
+                        <?php foreach ( $filters['topic'] as $value => $label ) :
+                            $topic_total = 0;
+                            foreach ( $payload['items'] as $item ) {
+                                if ( (string) $item['topicKey'] === (string) $value ) {
+                                    $topic_total++;
+                                }
+                            }
+                            ?>
+                            <button type="button" data-topic-value="<?php echo esc_attr( $value ); ?>">
+                                <?php echo esc_html( $label ); ?>
+                                <span>(<?php echo esc_html( number_format_i18n( $topic_total ) ); ?>)</span>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
                 </aside>
                 <div class="tt-testbook-main">
-                    <div class="tt-rest-quiz-grid" data-tt-rest-grid></div>
+                    <div class="tt-rest-quiz-grid" data-tt-rest-grid>
+                        <?php foreach ( array_slice( $payload['items'], 0, 20 ) as $index => $item ) : ?>
+                            <article class="tt-testbook-test-card">
+                                <div class="tt-testbook-test-card__main">
+                                    <div class="tt-testbook-test-card__topline">
+                                        <?php if ( ! empty( $item['isFree'] ) ) : ?>
+                                            <span class="tt-testbook-test-card__free"><?php esc_html_e( 'Free', 'tentracker' ); ?></span>
+                                        <?php endif; ?>
+                                        <span><?php echo esc_html( $item['topic'] ?: __( 'General', 'tentracker' ) ); ?></span>
+                                    </div>
+                                    <h3 class="tt-testbook-test-card__title">
+                                        <a href="<?php echo esc_url( $item['url'] ); ?>"><?php echo esc_html( $item['title'] ?: __( 'Test', 'tentracker' ) ); ?></a>
+                                    </h3>
+                                    <?php if ( ! empty( $item['excerpt'] ) ) : ?>
+                                        <p class="tt-testbook-test-card__desc"><?php echo esc_html( $item['excerpt'] ); ?></p>
+                                    <?php endif; ?>
+                                    <div class="tt-testbook-test-card__meta">
+                                        <span><?php echo esc_html( $item['questions'] ? sprintf( _n( '%s Question', '%s Questions', (int) $item['questions'], 'tentracker' ), number_format_i18n( (int) $item['questions'] ) ) : __( 'Questions soon', 'tentracker' ) ); ?></span>
+                                        <span><?php echo esc_html( $item['marks'] ? sprintf( __( '%s Marks', 'tentracker' ), number_format_i18n( (int) $item['marks'] ) ) : __( 'Marks soon', 'tentracker' ) ); ?></span>
+                                        <span><?php echo esc_html( $item['duration'] ?: __( 'Flexible', 'tentracker' ) ); ?></span>
+                                        <span><?php echo esc_html( $item['languages'] ?: __( 'English, Hindi', 'tentracker' ) ); ?></span>
+                                    </div>
+                                </div>
+                                <div class="tt-testbook-test-card__side">
+                                    <span class="tt-testbook-test-card__number">#<?php echo esc_html( number_format_i18n( $index + 1 ) ); ?></span>
+                                    <a class="tt-testbook-test-card__cta" href="<?php echo esc_url( $item['url'] ); ?>"><?php esc_html_e( 'Start Now', 'tentracker' ); ?></a>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
                     <div class="tt-quiz-empty" data-tt-rest-empty hidden><?php esc_html_e( 'No quizzes match your search or filters.', 'tentracker' ); ?></div>
                     <div class="tt-quiz-pagination" data-tt-rest-pagination aria-label="<?php esc_attr_e( 'Quiz pagination', 'tentracker' ); ?>"></div>
                 </div>
             </div>
         </div>
-
-        <div class="tt-exam-empty" data-tt-rest-error hidden><?php esc_html_e( 'Unable to load quizzes right now. Please try again.', 'tentracker' ); ?></div>
     </div>
     <?php
 }

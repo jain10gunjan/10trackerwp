@@ -292,7 +292,7 @@
     browsers.forEach(function (browser) {
       var endpoint = browser.getAttribute('data-endpoint') || cfg.quizEndpoint || '';
       var perPage = parseInt(browser.getAttribute('data-per-page') || '20', 10);
-      var skeleton = browser.querySelector('[data-tt-quiz-skeleton]');
+      var initialScript = browser.querySelector('[data-tt-rest-initial]');
       var content = browser.querySelector('[data-tt-quiz-content]');
       var error = browser.querySelector('[data-tt-rest-error]');
       var grid = browser.querySelector('[data-tt-rest-grid]');
@@ -316,17 +316,7 @@
       var items = [];
       var currentPage = 1;
 
-      function setLoading(isLoading) {
-        if (skeleton) {
-          skeleton.hidden = !isLoading;
-          skeleton.setAttribute('aria-busy', isLoading ? 'true' : 'false');
-        }
-        if (content) content.hidden = isLoading;
-        if (error) error.hidden = true;
-      }
-
       function setError() {
-        if (skeleton) skeleton.hidden = true;
         if (content) content.hidden = true;
         if (error) error.hidden = false;
         if (practiceSummary) practiceSummary.textContent = 'Unable to load quizzes';
@@ -340,6 +330,7 @@
       function fillSelect(select, wrap, options) {
         if (!select || !wrap) return;
         var keys = Object.keys(options || {});
+        select.innerHTML = '<option value="">All</option>';
         if (!keys.length) {
           wrap.hidden = true;
           return;
@@ -399,7 +390,7 @@
           + '<article class="tt-testbook-test-card">'
           + '  <div class="tt-testbook-test-card__main">'
           + '    <div class="tt-testbook-test-card__topline">' + freeBadge + '<span>' + escHtml(topicText) + '</span></div>'
-          + '    <h3 class="tt-testbook-test-card__title"><a href="' + escHtml(item.url || '#') + '">' + escHtml(item.title || 'Quiz') + '</a></h3>'
+          + '    <h3 class="tt-testbook-test-card__title"><a href="' + escHtml(item.url || '#') + '">' + escHtml(item.title || 'Test') + '</a></h3>'
           + (item.excerpt ? '<p class="tt-testbook-test-card__desc">' + escHtml(item.excerpt) + '</p>' : '')
           + '    <div class="tt-testbook-test-card__meta">'
           + '      <span>' + escHtml(questions) + '</span>'
@@ -490,7 +481,7 @@
           }).join('');
         }
 
-        if (resultCount) resultCount.textContent = formatCount(filtered.length, 'quiz', 'quizzes');
+        if (resultCount) resultCount.textContent = formatCount(filtered.length, 'test', 'tests');
         if (resultQuestions) resultQuestions.textContent = formatCount(filteredQuestions, 'question', 'questions');
         if (empty) empty.hidden = filtered.length > 0;
         renderPager(totalPages);
@@ -526,12 +517,31 @@
         }
       }
 
+      function hydrate(data) {
+        items = Array.isArray(data.items) ? data.items : [];
+        fillSelect(difficulty, difficultyWrap, (data.filters || {}).difficulty || {});
+        fillSelect(topic, topicWrap, (data.filters || {}).topic || {});
+        fillTopicRail((data.filters || {}).topic || {});
+        updateGlobalStats(data);
+        bindControls();
+        if (content) content.hidden = false;
+        render();
+      }
+
+      if (initialScript) {
+        try {
+          hydrate(JSON.parse(initialScript.textContent || '{}'));
+        } catch (e) {
+          setError();
+        }
+        return;
+      }
+
       if (!endpoint) {
         setError();
         return;
       }
 
-      setLoading(true);
       fetch(endpoint, {
         method: 'GET',
         credentials: 'same-origin',
@@ -545,14 +555,7 @@
           return response.json();
         })
         .then(function (data) {
-          items = Array.isArray(data.items) ? data.items : [];
-          fillSelect(difficulty, difficultyWrap, (data.filters || {}).difficulty || {});
-          fillSelect(topic, topicWrap, (data.filters || {}).topic || {});
-          fillTopicRail((data.filters || {}).topic || {});
-          updateGlobalStats(data);
-          bindControls();
-          setLoading(false);
-          render();
+          hydrate(data);
         })
         .catch(setError);
     });
