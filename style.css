@@ -2025,8 +2025,45 @@ body.tt-nav-open { overflow: hidden; }
   .tt-nav,
   .tt-header__search,
   .tt-header__actions { display: none !important; }
-  .tt-menu-toggle { display: flex; }
-  .tt-header__inner { gap: 12px; }
+  .tt-header {
+    height: 58px;
+    overflow: visible;
+  }
+  .tt-header__inner {
+    gap: 10px;
+    justify-content: space-between;
+    padding-inline: 14px;
+  }
+  .tt-logo {
+    min-width: 0;
+    gap: 8px;
+  }
+  .tt-logo__mark {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    font-size: .82rem;
+  }
+  .tt-logo__text {
+    max-width: calc(100vw - 104px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .96rem;
+  }
+  .tt-menu-toggle {
+    display: inline-flex;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    flex: 0 0 38px;
+    border-radius: 10px;
+    background: rgba(255,255,255,.10);
+  }
+  .tt-menu-toggle[aria-expanded="true"] {
+    background: rgba(37,99,235,.32);
+    border-color: rgba(96,165,250,.55);
+  }
 
   /* ── Hero ── */
   .tt-hero { overflow: hidden; }

@@ -1409,6 +1409,77 @@
 }
 
 @media (max-width: 720px) {
+  .tt-exam-hero {
+    padding: 18px 0 22px;
+    background:
+      radial-gradient(320px 160px at 20% 0%, rgba(37,99,235,.22), transparent 62%),
+      linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
+  }
+
+  .tt-exam-hero__grid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 12px;
+  }
+
+  .tt-exam-hero__content {
+    order: 1;
+    padding: 16px;
+    border: 1px solid rgba(37,99,235,.12);
+    border-radius: 22px;
+    background: rgba(255,255,255,.72);
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(10px);
+  }
+
+  .tt-exam-hero__card {
+    display: none;
+  }
+
+  .tt-exam-hero__title {
+    font-size: clamp(1.45rem, 7vw, 2rem);
+    line-height: 1.08;
+    letter-spacing: -.04em;
+    margin: 6px 0 8px;
+  }
+
+  .tt-exam-hero__updated {
+    margin-bottom: 10px;
+    font-size: .8rem;
+  }
+
+  .tt-exam-hero__sub {
+    font-size: .9rem;
+    line-height: 1.55;
+    margin-bottom: 12px;
+  }
+
+  .tt-exam-hero__meta {
+    gap: 7px;
+    margin-bottom: 14px;
+  }
+
+  .tt-pill {
+    padding: 6px 10px;
+    font-size: .72rem;
+    font-weight: 850;
+    background: #fff;
+  }
+
+  .tt-exam-hero__cta {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 9px;
+  }
+
+  .tt-exam-hero__cta .tt-btn {
+    width: 100%;
+    min-height: 42px;
+    justify-content: center;
+    border-radius: 14px;
+  }
+
   .tt-accordion-tabs {
     margin-inline: -2px;
     border-radius: var(--r-lg);

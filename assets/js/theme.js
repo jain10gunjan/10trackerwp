@@ -14,6 +14,7 @@
 
     function openNav(e) {
         if (e) e.preventDefault();
+        if (!$nav.length) return;
         $nav.addClass('open is-open').attr('aria-hidden', 'false');
         $toggle.attr('aria-expanded', 'true');
         $('body').addClass('tt-nav-open').css('overflow', 'hidden');
@@ -21,6 +22,7 @@
 
     function closeNav(e) {
         if (e) e.preventDefault();
+        if (!$nav.length) return;
         $nav.removeClass('open is-open').attr('aria-hidden', 'true');
         $toggle.attr('aria-expanded', 'false');
         $('body').removeClass('tt-nav-open').css('overflow', '');
