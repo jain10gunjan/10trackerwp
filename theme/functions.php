@@ -756,6 +756,52 @@ function tt_exam_get_quiz_duration( $quiz_id ) {
 }
 
 /**
+ * Resolve total marks for a quiz.
+ */
+function tt_exam_get_quiz_marks( $quiz_id, $question_count = 0 ) {
+    foreach ( array( '_ek_total_marks', 'ek_total_marks', 'total_marks', 'marks', '_marks' ) as $key ) {
+        $value = get_post_meta( $quiz_id, $key, true );
+        if ( is_numeric( $value ) ) {
+            return max( 0, (int) $value );
+        }
+    }
+
+    return $question_count ? $question_count * 2 : 0;
+}
+
+/**
+ * Resolve quiz languages.
+ */
+function tt_exam_get_quiz_languages( $quiz_id ) {
+    foreach ( array( '_ek_languages', 'ek_languages', 'languages', 'language', '_language' ) as $key ) {
+        $value = get_post_meta( $quiz_id, $key, true );
+        if ( is_array( $value ) ) {
+            return implode( ', ', array_filter( array_map( 'sanitize_text_field', $value ) ) );
+        }
+        $value = trim( (string) $value );
+        if ( '' !== $value ) {
+            return sanitize_text_field( $value );
+        }
+    }
+
+    return __( 'English, Hindi', 'tentracker' );
+}
+
+/**
+ * Resolve whether a quiz should be highlighted as free.
+ */
+function tt_exam_is_quiz_free( $quiz_id ) {
+    foreach ( array( '_ek_is_free', 'ek_is_free', 'is_free', 'free', '_free' ) as $key ) {
+        $value = get_post_meta( $quiz_id, $key, true );
+        if ( '' !== (string) $value ) {
+            return (bool) $value;
+        }
+    }
+
+    return true;
+}
+
+/**
  * Resolve the chapter/topic label for a quiz when present.
  */
 function tt_exam_get_quiz_chapter( $quiz_id ) {
@@ -941,6 +987,7 @@ function tt_exam_prepare_quiz_item( $quiz, $index = 0 ) {
     $categories     = tt_exam_get_quiz_category_labels( $quiz->ID );
     $excerpt        = has_excerpt( $quiz ) ? get_the_excerpt( $quiz ) : wp_trim_words( wp_strip_all_tags( $quiz->post_content ), 22 );
     $topic_label    = $chapter ?: ( ! empty( $categories ) ? $categories[0] : '' );
+    $marks          = tt_exam_get_quiz_marks( $quiz->ID, $question_count );
 
     return array(
         'id'             => (int) $quiz->ID,
@@ -949,8 +996,11 @@ function tt_exam_prepare_quiz_item( $quiz, $index = 0 ) {
         'excerpt'        => $excerpt,
         'url'            => get_permalink( $quiz ),
         'questions'      => (int) $question_count,
+        'marks'          => (int) $marks,
         'difficulty'     => $difficulty,
         'duration'       => $duration,
+        'languages'      => tt_exam_get_quiz_languages( $quiz->ID ),
+        'isFree'         => tt_exam_is_quiz_free( $quiz->ID ),
         'chapter'        => $chapter,
         'topic'          => $topic_label,
         'topicKey'       => sanitize_title( $topic_label ),
@@ -1243,9 +1293,17 @@ function tt_exam_render_quiz_rest_browser( $exam_id ) {
                 <span data-tt-rest-result-questions></span>
             </div>
 
-            <div class="tt-rest-quiz-grid" data-tt-rest-grid></div>
-            <div class="tt-quiz-empty" data-tt-rest-empty hidden><?php esc_html_e( 'No quizzes match your search or filters.', 'tentracker' ); ?></div>
-            <div class="tt-quiz-pagination" data-tt-rest-pagination aria-label="<?php esc_attr_e( 'Quiz pagination', 'tentracker' ); ?>"></div>
+            <div class="tt-testbook-layout">
+                <aside class="tt-testbook-sidebar" aria-label="<?php esc_attr_e( 'Test categories', 'tentracker' ); ?>">
+                    <div class="tt-testbook-sidebar__title"><?php esc_html_e( 'Mock Tests', 'tentracker' ); ?></div>
+                    <div class="tt-testbook-category-list" data-tt-rest-topic-rail></div>
+                </aside>
+                <div class="tt-testbook-main">
+                    <div class="tt-rest-quiz-grid" data-tt-rest-grid></div>
+                    <div class="tt-quiz-empty" data-tt-rest-empty hidden><?php esc_html_e( 'No quizzes match your search or filters.', 'tentracker' ); ?></div>
+                    <div class="tt-quiz-pagination" data-tt-rest-pagination aria-label="<?php esc_attr_e( 'Quiz pagination', 'tentracker' ); ?>"></div>
+                </div>
+            </div>
         </div>
 
         <div class="tt-exam-empty" data-tt-rest-error hidden><?php esc_html_e( 'Unable to load quizzes right now. Please try again.', 'tentracker' ); ?></div>

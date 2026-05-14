@@ -24,13 +24,31 @@ $intro_content          = trim( (string) $intro_content );
 ?>
 
 <!-- Hero -->
-<header class="tt-exam-hero">
+<header class="tt-exam-hero tt-exam-hero--test-series">
   <div class="tt-container tt-exam-hero__inner">
     <?php tt_breadcrumbs(); ?>
 
     <div class="tt-exam-hero__grid">
       <div class="tt-exam-hero__content">
-        <h1 class="tt-exam-hero__title"><?php the_title(); ?></h1>
+        <h1 class="tt-exam-hero__title">
+          <?php
+          printf(
+              /* translators: %s: exam title */
+              esc_html__( '%s Mock Test Series', 'tentracker' ),
+              esc_html( get_the_title() )
+          );
+          ?>
+        </h1>
+
+        <p class="tt-exam-hero__updated">
+          <?php
+          printf(
+              /* translators: %s: modified date */
+              esc_html__( 'Last updated on %s', 'tentracker' ),
+              esc_html( get_the_modified_date() )
+          );
+          ?>
+        </p>
 
         <?php if ( has_excerpt() ) : ?>
           <p class="tt-exam-hero__sub"><?php the_excerpt(); ?></p>
@@ -55,23 +73,26 @@ $intro_content          = trim( (string) $intro_content );
       </div>
 
       <div class="tt-exam-hero__card">
-        <div class="tt-exam-hero__card-title"><?php esc_html_e( 'Exam snapshot', 'tentracker' ); ?></div>
+        <div class="tt-exam-hero__card-title"><?php esc_html_e( 'Test Series', 'tentracker' ); ?></div>
         <div class="tt-exam-hero__card-list">
           <div class="tt-exam-hero__card-row">
-            <span><?php esc_html_e( 'Quizzes', 'tentracker' ); ?></span>
+            <span><?php esc_html_e( 'Total Tests', 'tentracker' ); ?></span>
             <strong id="tt-exam-quiz-count">—</strong>
           </div>
           <div class="tt-exam-hero__card-row">
-            <span><?php esc_html_e( 'Questions', 'tentracker' ); ?></span>
+            <span><?php esc_html_e( 'Total Questions', 'tentracker' ); ?></span>
             <strong id="tt-exam-question-count">—</strong>
           </div>
           <div class="tt-exam-hero__card-row">
-            <span><?php esc_html_e( 'Difficulty', 'tentracker' ); ?></span>
+            <span><?php esc_html_e( 'Languages', 'tentracker' ); ?></span>
             <strong id="tt-exam-diff-mix"><?php esc_html_e( 'Loading', 'tentracker' ); ?></strong>
           </div>
         </div>
         <div class="tt-exam-hero__card-foot">
-          <span class="tt-exam-hero__card-note"><?php esc_html_e( 'Quizzes and articles are matched from this exam and category.', 'tentracker' ); ?></span>
+          <a href="<?php echo esc_url( is_user_logged_in() ? '#accordion-quiz' : tt_register_url() ); ?>" class="tt-exam-series-cta">
+            <?php echo esc_html( is_user_logged_in() ? __( 'Start Free Tests', 'tentracker' ) : __( 'Sign up & Take Free Tests', 'tentracker' ) ); ?>
+          </a>
+          <span class="tt-exam-hero__card-note"><?php esc_html_e( 'Practice tests, chapter tests and current affairs in one place.', 'tentracker' ); ?></span>
         </div>
       </div>
     </div>
@@ -136,8 +157,16 @@ $intro_content          = trim( (string) $intro_content );
             <div class="tt-accordion__body">
               <div class="tt-section-panel-head">
                 <div>
-                  <p class="tt-section-panel-head__eyebrow"><?php esc_html_e( 'Practice Quiz Section', 'tentracker' ); ?></p>
-                  <h2 class="tt-section-panel-head__title"><?php esc_html_e( 'All quizzes and tests for this exam', 'tentracker' ); ?></h2>
+                  <p class="tt-section-panel-head__eyebrow"><?php esc_html_e( 'All Tests', 'tentracker' ); ?></p>
+                  <h2 class="tt-section-panel-head__title">
+                    <?php
+                    printf(
+                        /* translators: %s: exam title */
+                        esc_html__( '%s Mock Test Series All Tests', 'tentracker' ),
+                        esc_html( get_the_title() )
+                    );
+                    ?>
+                  </h2>
                 </div>
                 <span class="tt-section-panel-head__count" id="tt-practice-summary"><?php esc_html_e( 'Loading quizzes...', 'tentracker' ); ?></span>
               </div>

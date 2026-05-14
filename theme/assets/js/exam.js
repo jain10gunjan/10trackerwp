@@ -303,6 +303,7 @@
       var difficultyWrap = browser.querySelector('[data-tt-rest-difficulty-wrap]');
       var topic = browser.querySelector('[data-tt-rest-topic]');
       var topicWrap = browser.querySelector('[data-tt-rest-topic-wrap]');
+      var topicRail = browser.querySelector('[data-tt-rest-topic-rail]');
       var reset = browser.querySelector('[data-tt-rest-reset]');
       var resultCount = browser.querySelector('[data-tt-rest-result-count]');
       var resultQuestions = browser.querySelector('[data-tt-rest-result-questions]');
@@ -352,6 +353,30 @@
         wrap.hidden = false;
       }
 
+      function fillTopicRail(options) {
+        if (!topicRail) return;
+        var keys = Object.keys(options || {});
+        var html = '<button type="button" class="is-active" data-topic-value="">All Tests <span>(' + items.length + ')</span></button>';
+        html += keys.map(function (key) {
+          var total = items.filter(function (item) {
+            return String(item.topicKey || '') === key;
+          }).length;
+          return '<button type="button" data-topic-value="' + escHtml(key) + '">' + escHtml(options[key]) + ' <span>(' + escHtml(total) + ')</span></button>';
+        }).join('');
+        topicRail.innerHTML = html;
+        Array.prototype.slice.call(topicRail.querySelectorAll('button')).forEach(function (button) {
+          button.addEventListener('click', function () {
+            var value = button.getAttribute('data-topic-value') || '';
+            if (topic) topic.value = value;
+            currentPage = 1;
+            Array.prototype.slice.call(topicRail.querySelectorAll('button')).forEach(function (btn) {
+              btn.classList.toggle('is-active', btn === button);
+            });
+            render();
+          });
+        });
+      }
+
       function matches(item) {
         var query = search ? (search.value || '').trim().toLowerCase() : '';
         var diff = difficulty ? (difficulty.value || '').trim().toLowerCase() : '';
@@ -363,26 +388,30 @@
       }
 
       function renderCard(item, number) {
-        var diff = item.difficulty || 'Mixed';
-        var diffKey = item.difficultyKey || 'na';
         var topicText = item.topic || 'General';
-        var questions = item.questions ? formatCount(item.questions, 'question', 'questions') : 'Questions soon';
+        var questions = item.questions ? (item.questions + ' Questions') : 'Questions soon';
+        var marks = item.marks ? (item.marks + ' Marks') : 'Marks soon';
         var duration = item.duration || 'Flexible';
+        var languages = item.languages || 'English, Hindi';
+        var freeBadge = item.isFree ? '<span class="tt-testbook-test-card__free">Free</span>' : '';
 
         return ''
-          + '<article class="tt-rest-quiz-card">'
-          + '  <div class="tt-rest-quiz-card__top">'
-          + '    <span class="tt-rest-quiz-card__num">' + escHtml(number) + '</span>'
-          + '    <span class="tt-diff tt-diff--' + escHtml(diffKey) + '">' + escHtml(diff) + '</span>'
+          + '<article class="tt-testbook-test-card">'
+          + '  <div class="tt-testbook-test-card__main">'
+          + '    <div class="tt-testbook-test-card__topline">' + freeBadge + '<span>' + escHtml(topicText) + '</span></div>'
+          + '    <h3 class="tt-testbook-test-card__title"><a href="' + escHtml(item.url || '#') + '">' + escHtml(item.title || 'Quiz') + '</a></h3>'
+          + (item.excerpt ? '<p class="tt-testbook-test-card__desc">' + escHtml(item.excerpt) + '</p>' : '')
+          + '    <div class="tt-testbook-test-card__meta">'
+          + '      <span>' + escHtml(questions) + '</span>'
+          + '      <span>' + escHtml(marks) + '</span>'
+          + '      <span>' + escHtml(duration) + '</span>'
+          + '      <span>' + escHtml(languages) + '</span>'
+          + '    </div>'
           + '  </div>'
-          + '  <h3 class="tt-rest-quiz-card__title"><a href="' + escHtml(item.url || '#') + '">' + escHtml(item.title || 'Quiz') + '</a></h3>'
-          + (item.excerpt ? '<p class="tt-rest-quiz-card__desc">' + escHtml(item.excerpt) + '</p>' : '')
-          + '  <div class="tt-rest-quiz-card__meta">'
-          + '    <span>' + escHtml(questions) + '</span>'
-          + '    <span>' + escHtml(topicText) + '</span>'
-          + '    <span>' + escHtml(duration) + '</span>'
+          + '  <div class="tt-testbook-test-card__side">'
+          + '    <span class="tt-testbook-test-card__number">#' + escHtml(number) + '</span>'
+          + '    <a class="tt-testbook-test-card__cta" href="' + escHtml(item.url || '#') + '">Start Now</a>'
           + '  </div>'
-          + '  <a class="tt-rest-quiz-card__cta" href="' + escHtml(item.url || '#') + '">Start practice</a>'
           + '</article>';
       }
 
@@ -440,8 +469,8 @@
         if (totalQuestions) totalQuestions.textContent = String(questionCount);
         if (heroQuizCount) heroQuizCount.textContent = String(quizCount);
         if (heroQuestionCount) heroQuestionCount.textContent = String(questionCount);
-        if (heroDiffMix) heroDiffMix.textContent = diffLabels.length ? diffLabels.slice(0, 3).join(', ') : 'Mixed';
-        if (practiceSummary) practiceSummary.textContent = quizCount + ' quizzes - ' + questionCount + ' questions';
+        if (heroDiffMix) heroDiffMix.textContent = 'English, Hindi';
+        if (practiceSummary) practiceSummary.textContent = quizCount + ' Tests';
       }
 
       function render() {
@@ -472,6 +501,12 @@
           if (!control) return;
           control.addEventListener(control === search ? 'input' : 'change', function () {
             currentPage = 1;
+            if (control === topic && topicRail) {
+              var value = topic.value || '';
+              Array.prototype.slice.call(topicRail.querySelectorAll('button')).forEach(function (btn) {
+                btn.classList.toggle('is-active', (btn.getAttribute('data-topic-value') || '') === value);
+              });
+            }
             render();
           });
         });
@@ -480,6 +515,11 @@
             if (search) search.value = '';
             if (difficulty) difficulty.value = '';
             if (topic) topic.value = '';
+            if (topicRail) {
+              Array.prototype.slice.call(topicRail.querySelectorAll('button')).forEach(function (btn, index) {
+                btn.classList.toggle('is-active', index === 0);
+              });
+            }
             currentPage = 1;
             render();
           });
@@ -508,6 +548,7 @@
           items = Array.isArray(data.items) ? data.items : [];
           fillSelect(difficulty, difficultyWrap, (data.filters || {}).difficulty || {});
           fillSelect(topic, topicWrap, (data.filters || {}).topic || {});
+          fillTopicRail((data.filters || {}).topic || {});
           updateGlobalStats(data);
           bindControls();
           setLoading(false);
