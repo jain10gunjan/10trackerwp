@@ -1419,7 +1419,8 @@ function tt_exam_render_article_cards( $posts, $empty_message ) {
 
             $categories     = get_the_category( $article->ID );
             $category_names = array_slice( wp_list_pluck( (array) $categories, 'name' ), 0, 2 );
-            $excerpt        = has_excerpt( $article ) ? get_the_excerpt( $article ) : wp_trim_words( wp_strip_all_tags( $article->post_content ), 24 );
+            $excerpt        = has_excerpt( $article ) ? get_the_excerpt( $article ) : wp_trim_words( wp_strip_all_tags( $article->post_content ), 22 );
+            $reading_time   = max( 1, (int) ceil( str_word_count( wp_strip_all_tags( $article->post_content ) ) / 220 ) );
             ?>
             <article class="tt-post-card">
                 <a class="tt-post-card__media" href="<?php echo esc_url( get_permalink( $article ) ); ?>" aria-label="<?php echo esc_attr( get_the_title( $article ) ); ?>">
@@ -1433,9 +1434,20 @@ function tt_exam_render_article_cards( $posts, $empty_message ) {
                 <div class="tt-post-card__body">
                     <div class="tt-post-card__meta">
                         <?php if ( ! empty( $category_names ) ) : ?>
-                            <span><?php echo esc_html( implode( ' / ', $category_names ) ); ?></span>
+                            <?php foreach ( $category_names as $category_name ) : ?>
+                                <span class="tt-post-card__chip"><?php echo esc_html( $category_name ); ?></span>
+                            <?php endforeach; ?>
                         <?php endif; ?>
                         <span><?php echo esc_html( get_the_date( '', $article ) ); ?></span>
+                        <span>
+                            <?php
+                            printf(
+                                /* translators: %s: reading time in minutes */
+                                esc_html__( '%s min read', 'tentracker' ),
+                                esc_html( number_format_i18n( $reading_time ) )
+                            );
+                            ?>
+                        </span>
                     </div>
 
                     <h3 class="tt-post-card__title">
